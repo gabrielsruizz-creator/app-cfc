@@ -34,10 +34,10 @@ if (!url) {
 }
 
 const demo = process.argv.includes('--demo');
-// Mesma pasta usada pela API em desenvolvimento (apps/api/.armazenamento).
-const pastaArquivos = path.resolve(
-  process.env.ARMAZENAMENTO_DIR ?? path.join(__dirname, '../../../../apps/api/.armazenamento'),
-);
+// Mesma pasta usada pela API: caminhos relativos são resolvidos a partir de apps/api,
+// que é onde a API roda em desenvolvimento.
+const pastaApi = path.join(__dirname, '../../../../apps/api');
+const pastaArquivos = path.resolve(pastaApi, process.env.ARMAZENAMENTO_DIR ?? '.armazenamento');
 
 /** Imagem ilustrativa para os documentos de demonstração. */
 function imagemDemo(titulo: string) {
