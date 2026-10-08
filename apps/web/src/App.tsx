@@ -11,11 +11,24 @@ import { AdminComissoes } from './paginas/admin/Comissoes';
 import { AdminConfiguracoes } from './paginas/admin/Configuracoes';
 import { AdminInicio } from './paginas/admin/Inicio';
 import { AdminInstrutor, AdminInstrutores } from './paginas/admin/Instrutores';
+import { AdminDenuncias, AdminDisputas, AdminUsuarios } from './paginas/admin/Moderacao';
 import { AdminOperacoes } from './paginas/admin/Operacoes';
 import { AutoescolaCadastro } from './paginas/autoescola/Cadastro';
-import { EmBreve } from './paginas/autoescola/EmBreve';
+import { PainelFinanceiro } from './componentes/Financeiro';
+import {
+  AutoescolaAgenda,
+  AutoescolaAlunos,
+  AutoescolaInstrutores,
+} from './paginas/autoescola/Equipe';
 import { AutoescolaIntegracoes } from './paginas/autoescola/Integracoes';
+import { AutoescolaNovosAlunos } from './paginas/autoescola/NovosAlunos';
+import { AutoescolaPacotes } from './paginas/autoescola/Pacotes';
 import { AutoescolaPainel } from './paginas/autoescola/Painel';
+import {
+  AutoescolaAvaliacoes,
+  AutoescolaConversas,
+  AutoescolaVitrine,
+} from './paginas/autoescola/Vitrine';
 import { Entrar } from './paginas/Entrar';
 
 function AlternarTema() {
@@ -58,6 +71,18 @@ function Layout({ area }: { area: 'admin' | 'autoescola' }) {
       ),
     enabled: area === 'admin',
   });
+  const dash = useQuery({
+    queryKey: ['admin', 'dashboard'],
+    queryFn: () => api<{ denunciasAbertas: number; disputasAbertas: number }>('/admin/dashboard'),
+    enabled: area === 'admin',
+  });
+  const fila = useQuery({
+    queryKey: ['autoescola', 'resumo'],
+    queryFn: () => api<{ novos: number }>('/autoescola/resumo'),
+    enabled: area === 'autoescola',
+    retry: false,
+    refetchInterval: 60_000,
+  });
   const contador = (n?: number) => (n ? <span className="selo amarelo">{n}</span> : null);
 
   return (
@@ -78,6 +103,11 @@ function Layout({ area }: { area: 'admin' | 'autoescola' }) {
             </NavLink>
             <span className="rotulo">Operação</span>
             <NavLink to="/admin/aulas">Aulas</NavLink>
+            <NavLink to="/admin/usuarios">Usuários</NavLink>
+            <NavLink to="/admin/disputas">Disputas {contador(dash.data?.disputasAbertas)}</NavLink>
+            <NavLink to="/admin/denuncias">
+              Denúncias {contador(dash.data?.denunciasAbertas)}
+            </NavLink>
             <NavLink to="/admin/operacoes">
               Operações {contador(resumo.data?.eventosComFalha)}
             </NavLink>
@@ -110,12 +140,17 @@ function Layout({ area }: { area: 'admin' | 'autoescola' }) {
             <NavLink to="/autoescola" end>
               Início
             </NavLink>
-            <NavLink to="/autoescola/novos-alunos">Novos alunos do app</NavLink>
+            <NavLink to="/autoescola/novos-alunos">
+              Novos alunos do app {contador(fila.data?.novos)}
+            </NavLink>
             <NavLink to="/autoescola/alunos">Alunos</NavLink>
             <NavLink to="/autoescola/agenda">Agenda</NavLink>
+            <NavLink to="/autoescola/conversas">Conversas</NavLink>
+            <span className="rotulo">Gestão</span>
             <NavLink to="/autoescola/instrutores">Instrutores</NavLink>
             <NavLink to="/autoescola/pacotes">Pacotes</NavLink>
             <NavLink to="/autoescola/vitrine">Vitrine</NavLink>
+            <NavLink to="/autoescola/avaliacoes">Avaliações</NavLink>
             <NavLink to="/autoescola/financeiro">Financeiro</NavLink>
             <NavLink to="/autoescola/integracoes">Integrações</NavLink>
           </>
@@ -191,6 +226,9 @@ export function App() {
         <Route path="autoescolas" element={<AdminAutoescolas />} />
         <Route path="autoescolas/:id" element={<AdminAutoescola />} />
         <Route path="aulas" element={<AdminAulas />} />
+        <Route path="usuarios" element={<AdminUsuarios />} />
+        <Route path="disputas" element={<AdminDisputas />} />
+        <Route path="denuncias" element={<AdminDenuncias />} />
         <Route path="operacoes" element={<AdminOperacoes />} />
         <Route path="auditoria" element={<AdminAuditoria />} />
         <Route path="comissoes" element={<AdminComissoes />} />
@@ -198,8 +236,16 @@ export function App() {
       </Route>
       <Route path="/autoescola" element={<Protegido area="autoescola" />}>
         <Route index element={<AutoescolaPainel />} />
+        <Route path="novos-alunos" element={<AutoescolaNovosAlunos />} />
+        <Route path="alunos" element={<AutoescolaAlunos />} />
+        <Route path="agenda" element={<AutoescolaAgenda />} />
+        <Route path="conversas" element={<AutoescolaConversas />} />
+        <Route path="instrutores" element={<AutoescolaInstrutores />} />
+        <Route path="pacotes" element={<AutoescolaPacotes />} />
+        <Route path="vitrine" element={<AutoescolaVitrine />} />
+        <Route path="avaliacoes" element={<AutoescolaAvaliacoes />} />
+        <Route path="financeiro" element={<PainelFinanceiro base="/autoescola" />} />
         <Route path="integracoes" element={<AutoescolaIntegracoes />} />
-        <Route path=":secao" element={<EmBreve />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

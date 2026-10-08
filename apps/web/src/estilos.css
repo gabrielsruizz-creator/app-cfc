@@ -16,6 +16,9 @@
   --sucesso-suave: #e3f4e8;
   --alerta: #9a5b00;
   --alerta-suave: #fff3d6;
+  /* Gráficos: cor da série validada (dataviz) contra a superfície de cada tema */
+  --serie-1: #0a8f86;
+  --grade-grafico: #e6ecec;
   --raio: 12px;
   font-family:
     system-ui,
@@ -45,10 +48,14 @@
     --sucesso-suave: #16301f;
     --alerta: #ffc266;
     --alerta-suave: #33270f;
+    --serie-1: #26a69a;
+    --grade-grafico: #243131;
   }
 }
 
 :root[data-tema='escuro'] {
+  --serie-1: #26a69a;
+  --grade-grafico: #243131;
   --primaria: #3cc2b4;
   --primaria-suave: #123533;
   --sobre-primaria: #04211f;
@@ -419,4 +426,217 @@ pre {
   padding: 8px;
   border-radius: 8px;
   margin: 0;
+}
+
+/* ---------- Fase 2 ---------- */
+.abas {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--borda);
+}
+.abas button {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--texto-suave);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.abas button[aria-selected='true'] {
+  color: var(--primaria);
+  border-bottom-color: var(--primaria);
+}
+.campo textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+.espera {
+  font-weight: 700;
+  font-size: 13px;
+}
+.espera.verde {
+  color: var(--sucesso);
+}
+.espera.amarelo {
+  color: var(--alerta);
+}
+.espera.vermelho {
+  color: var(--erro);
+}
+.cartao.fila {
+  border-left: 4px solid var(--borda);
+}
+.cartao.fila.verde {
+  border-left-color: var(--sucesso);
+}
+.cartao.fila.amarelo {
+  border-left-color: var(--alerta);
+}
+.cartao.fila.vermelho {
+  border-left-color: var(--erro);
+}
+.fotos {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+.fotos figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fotos .documento {
+  min-height: 120px;
+  height: 120px;
+}
+.fotos .documento img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.estrelas {
+  color: var(--destaque);
+  letter-spacing: 1px;
+}
+
+/* Indicadores (stat tiles) e figura principal */
+.indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.indicador .rotulo-ind {
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+.indicador .valor {
+  font-size: 28px;
+  font-weight: 650;
+  color: var(--texto);
+}
+.indicador.heroi .valor {
+  font-size: 52px;
+  line-height: 1.05;
+}
+.indicador .detalhe {
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+a.indicador {
+  text-decoration: none;
+  color: inherit;
+}
+a.indicador:hover {
+  border-color: var(--primaria);
+}
+
+/* Gráfico de colunas */
+.grafico {
+  position: relative;
+}
+.grafico svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.grafico .eixo {
+  fill: var(--texto-suave);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.grafico .linha-grade {
+  stroke: var(--grade-grafico);
+  stroke-width: 1;
+}
+.grafico .coluna {
+  fill: var(--serie-1);
+}
+.grafico .alvo:hover + .coluna,
+.grafico .alvo:focus + .coluna {
+  opacity: 0.8;
+}
+.grafico .alvo {
+  fill: transparent;
+  cursor: default;
+}
+.grafico .alvo:focus {
+  outline: none;
+}
+.dica {
+  position: absolute;
+  pointer-events: none;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  color: var(--texto);
+}
+.chat {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  min-height: 520px;
+}
+@media (max-width: 800px) {
+  .chat {
+    grid-template-columns: 1fr;
+  }
+}
+.chat .lista button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--texto);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.chat .lista button .selo {
+  align-self: center;
+}
+.chat .lista button.ativo {
+  border-color: var(--primaria);
+  background: var(--primaria-suave);
+}
+.mensagens {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 440px;
+  padding: 4px;
+}
+.balao {
+  max-width: 75%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--superficie-alt);
+  align-self: flex-start;
+}
+.balao.minha {
+  align-self: flex-end;
+  background: var(--primaria-suave);
+}
+.balao .hora {
+  display: block;
+  font-size: 11px;
+  color: var(--texto-suave);
+  margin-top: 2px;
 }

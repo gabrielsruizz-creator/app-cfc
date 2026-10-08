@@ -1,7 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api, enviarArquivo, mensagem } from '../../api';
-import { Aviso, Carregando, Status } from '../../componentes/comum';
+import { api, enviarArquivo, mensagem, reais } from '../../api';
+import { Aviso, Carregando, Estrelas, Indicador, Status } from '../../componentes/comum';
+
+type Resumo = {
+  novos: number;
+  emContato: number;
+  atrasados: number;
+  matriculasAtivas: number;
+  notaMedia: number | null;
+  totalAvaliacoes: number;
+  retido: number;
+  disponivel: number;
+};
 
 type Painel = {
   autoescola: {
@@ -27,6 +38,13 @@ export function AutoescolaPainel() {
   const q = useQuery({
     queryKey: ['autoescola', 'painel'],
     queryFn: () => api<Painel>('/autoescola/painel'),
+  });
+  const aprovada = q.data?.autoescola.status === 'aprovada';
+  const resumo = useQuery({
+    queryKey: ['autoescola', 'resumo'],
+    queryFn: () => api<Resumo>('/autoescola/resumo'),
+    enabled: aprovada,
+    refetchInterval: 60_000,
   });
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState<string | null>(null);
@@ -81,11 +99,49 @@ export function AutoescolaPainel() {
       {a.status === 'reprovada' && (
         <Aviso tipo="erro">Cadastro reprovado: {a.motivoStatus}. Corrija e envie novamente.</Aviso>
       )}
-      {a.status === 'aprovada' && (
-        <Aviso tipo="sucesso">
-          Sua autoescola está aprovada. A vitrine, os pacotes e a fila "Novos alunos do app" chegam
-          na próxima fase.
-        </Aviso>
+      {aprovada && resumo.data && (
+        <>
+          {resumo.data.atrasados > 0 && (
+            <Aviso tipo="alerta">
+              {resumo.data.atrasados} aluno(s) esperando contato há mais de 48 horas. Pedidos sem
+              resposta no prazo expiram e são reembolsados.
+            </Aviso>
+          )}
+          <div className="grade">
+            <Indicador
+              heroi
+              rotulo="Novos alunos do app"
+              valor={resumo.data.novos}
+              detalhe={`${resumo.data.emContato} em contato`}
+              para="/autoescola/novos-alunos"
+            />
+            <Indicador
+              rotulo="Matrículas ativas"
+              valor={resumo.data.matriculasAtivas}
+              para="/autoescola/alunos"
+            />
+            <Indicador
+              rotulo="Disponível para saque"
+              valor={reais(resumo.data.disponivel)}
+              detalhe={`${reais(resumo.data.retido)} a liberar`}
+              para="/autoescola/financeiro"
+            />
+            <Indicador
+              rotulo="Avaliação"
+              valor={
+                resumo.data.notaMedia !== null ? (
+                  <>
+                    {resumo.data.notaMedia.toFixed(1)} <Estrelas nota={resumo.data.notaMedia} />
+                  </>
+                ) : (
+                  '—'
+                )
+              }
+              detalhe={`${resumo.data.totalAvaliacoes} avaliações`}
+              para="/autoescola/avaliacoes"
+            />
+          </div>
+        </>
       )}
 
       <div className="cartao">
