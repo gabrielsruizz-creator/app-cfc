@@ -5,12 +5,16 @@ import {
   aulas,
   cobrancas,
   comAtor,
+  creditosAula,
+  disputas,
   eq,
   inArray,
   instrutorDocumentos,
   instrutores,
   lerConfiguracoes,
+  isNull,
   lt,
+  pedidos,
   publicarEvento,
   sql,
 } from '@volante/db';
@@ -19,6 +23,9 @@ import {
   concluirAula,
   encerrarComEstornoTotal,
   expirarAulaNaoPaga,
+  expirarCredito,
+  expirarPedidoAutoescola,
+  lembrarAutoescola,
 } from '@volante/dominio';
 import type { Dependencias } from '../dependencias';
 
@@ -82,7 +89,14 @@ export async function autoConfirmarFimDeAula(deps: Dependencias, agora = new Dat
     tx
       .select({ id: aulas.id })
       .from(aulas)
-      .where(and(eq(aulas.status, 'aguardando_confirmacao'), lt(aulas.checkoutEm, limite))),
+      .where(
+        and(
+          eq(aulas.status, 'aguardando_confirmacao'),
+          lt(aulas.checkoutEm, limite),
+          // aula com problema relatado espera a decisão do admin
+          sql`not exists (select 1 from ${disputas} d where d.aula_id = ${aulas.id} and d.status = 'aberta')`,
+        ),
+      ),
   );
   for (const { id } of aguardando) {
     await comAtor(deps.db, ATOR_SISTEMA, (tx) => concluirAula(tx, id, 'automatico'));
@@ -164,8 +178,67 @@ export async function verificarDocumentos(deps: Dependencias, agora = new Date()
   return { avaliados: docs.length, suspensos };
 }
 
+/**
+ * Fila da autoescola: lembrete quando o pedido pago fica sem atendimento por X horas e
+ * expiração (com estorno integral) quando passa do prazo de resposta.
+ */
+export async function acompanharPedidosAutoescola(deps: Dependencias, agora = new Date()) {
+  const cfg = await lerConfiguracoes(deps.db);
+  const limiteLembrete = new Date(agora.getTime() - cfg['pedido.lembrete_horas'] * 3600_000);
+  const { lembrar, expirar } = await comAtor(deps.db, ATOR_SISTEMA, async (tx) => ({
+    lembrar: await tx
+      .select({ id: pedidos.id })
+      .from(pedidos)
+      .where(
+        and(
+          eq(pedidos.status, 'pago'),
+          eq(pedidos.statusAtendimento, 'novo'),
+          isNull(pedidos.lembreteEnviadoEm),
+          lt(pedidos.pagoEm, limiteLembrete),
+        ),
+      ),
+    expirar: await tx
+      .select({ id: pedidos.id })
+      .from(pedidos)
+      .where(
+        and(
+          eq(pedidos.status, 'pago'),
+          inArray(pedidos.statusAtendimento, ['novo', 'em_contato']),
+          lt(pedidos.prazoRespostaEm, agora),
+        ),
+      ),
+  }));
+  let lembretes = 0;
+  let expirados = 0;
+  for (const { id } of expirar) {
+    if (await comAtor(deps.db, ATOR_SISTEMA, (tx) => expirarPedidoAutoescola(tx, id))) expirados++;
+  }
+  for (const { id } of lembrar) {
+    if (expirar.some((e) => e.id === id)) continue;
+    if (await comAtor(deps.db, ATOR_SISTEMA, (tx) => lembrarAutoescola(tx, id))) lembretes++;
+  }
+  return { lembretes, expirados };
+}
+
+/** Pacotes com validade vencida: aulas não usadas expiram e o valor vai ao vendedor. */
+export async function expirarCreditosVencidos(deps: Dependencias, agora = new Date()) {
+  const vencidos = await comAtor(deps.db, ATOR_SISTEMA, (tx) =>
+    tx
+      .select({ id: creditosAula.id })
+      .from(creditosAula)
+      .where(and(eq(creditosAula.status, 'ativo'), lt(creditosAula.validoAte, agora))),
+  );
+  let expirados = 0;
+  for (const { id } of vencidos) {
+    if (await comAtor(deps.db, ATOR_SISTEMA, (tx) => expirarCredito(tx, id, agora))) expirados++;
+  }
+  return expirados;
+}
+
 export async function executarRotinas(deps: Dependencias, agora = new Date()) {
   return {
+    pedidosAutoescola: await acompanharPedidosAutoescola(deps, agora),
+    creditosExpirados: await expirarCreditosVencidos(deps, agora),
     pixExpirados: await expirarPixNaoPagos(deps, agora),
     solicitacoesExpiradas: await expirarSolicitacoesSemResposta(deps, agora),
     aulasAutoConfirmadas: await autoConfirmarFimDeAula(deps, agora),

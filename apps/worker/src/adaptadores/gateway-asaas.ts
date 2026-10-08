@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import type {
   DadosCobrancaPix,
+  DadosPagamentoPix,
   GatewayPagamentoPort,
   ResultadoExterno,
   WebhookArmazenado,
@@ -118,6 +119,25 @@ export class GatewayAsaas implements GatewayPagamentoPort {
       walletId: d.destinoId,
     });
     return r.status === 'ok' ? { status: 'ok' as const, gatewayTransferenciaId: r.dados.id } : r;
+  }
+
+  async pagarPix(d: DadosPagamentoPix) {
+    const tipos = {
+      cpf: 'CPF',
+      cnpj: 'CNPJ',
+      email: 'EMAIL',
+      telefone: 'PHONE',
+      aleatoria: 'EVP',
+    } as const;
+    const r = await this.chamar<{ id: string }>('POST', '/transfers', {
+      value: d.valorCentavos / 100,
+      pixAddressKey: d.chave,
+      pixAddressKeyType: tipos[d.tipoChave],
+      operationType: 'PIX',
+      description: `Saque ${d.saqueId}`,
+      externalReference: d.saqueId,
+    });
+    return r.status === 'ok' ? { status: 'ok' as const, gatewayRef: r.dados.id } : r;
   }
 
   interpretarWebhook(w: WebhookArmazenado) {

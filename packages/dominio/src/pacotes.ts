@@ -4,6 +4,7 @@ import {
   autoescolas,
   cobrancas,
   creditosAula,
+  creditosMovimentos,
   eq,
   instrutores,
   instrutorVinculos,
@@ -18,7 +19,13 @@ import {
 } from '@volante/db';
 import { gerarCodigoPedido } from './codigos';
 import { ErroDominio, naoEncontrado } from './erros';
-import { calcularComissao, estornarValor, liberarValor, regraComissaoVigente } from './financeiro';
+import {
+  calcularComissao,
+  estornarValor,
+  liberarValor,
+  regraComissaoVigente,
+  retidoDoPedido,
+} from './financeiro';
 
 type Pedido = typeof pedidos.$inferSelect;
 
@@ -361,6 +368,35 @@ export async function lembrarAutoescola(tx: Tx, pedidoId: string) {
     autoescolaId: p.autoescolaId,
     payload: { pedidoId: p.id, autoescolaId: p.autoescolaId },
   });
+  return true;
+}
+
+/**
+ * Crédito vencido: as aulas não usadas expiram e o valor ainda retido é liberado ao vendedor
+ * (com a comissão normal). Só expira quando não há aula agendada usando o crédito.
+ */
+export async function expirarCredito(tx: Tx, creditoId: string, agora = new Date()) {
+  const [c] = await tx
+    .select()
+    .from(creditosAula)
+    .where(eq(creditosAula.id, creditoId))
+    .for('update');
+  if (!c || c.status !== 'ativo' || !c.validoAte || c.validoAte > agora) return false;
+  if (c.quantidadeReservada > 0) return false;
+  const restantes = c.quantidadeTotal - c.quantidadeConsumida;
+  await tx.update(creditosAula).set({ status: 'expirado' }).where(eq(creditosAula.id, c.id));
+  if (restantes > 0) {
+    await tx
+      .insert(creditosMovimentos)
+      .values({ creditoId: c.id, tipo: 'expiracao', quantidade: restantes });
+  }
+  const [pedido] = await tx.select().from(pedidos).where(eq(pedidos.id, c.pedidoId));
+  if (pedido) {
+    const retido = await retidoDoPedido(tx, pedido);
+    await liberarValor(tx, pedido, retido, {
+      descricao: `Pacote ${pedido.codigo}: aulas não usadas dentro da validade`,
+    });
+  }
   return true;
 }
 

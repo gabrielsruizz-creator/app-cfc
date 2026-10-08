@@ -4,14 +4,17 @@ import {
   ATOR_SISTEMA,
   cobrancas,
   comAtor,
+  contasRecebimento,
   eq,
   estornos,
   pedidos,
+  publicarEvento,
   repasses,
+  saques,
   usuarios,
   webhooksRecebidos,
 } from '@volante/db';
-import { confirmarPagamento } from '@volante/dominio';
+import { confirmarPagamento, decifrar, reverterSaque } from '@volante/dominio';
 import type { Dependencias } from '../dependencias';
 import type { Consumidor, Evento } from '../outbox';
 import type { GatewayPagamentoPort } from '../portas/gateway-pagamento';
@@ -235,6 +238,61 @@ export const executarRepasse: Consumidor = {
   },
 };
 
+/**
+ * Saque: Pix para a chave cadastrada. O saldo já foi debitado ao solicitar; se o gateway
+ * recusar de forma definitiva, o valor volta ao saldo disponível (reverterSaque).
+ */
+export const executarSaque: Consumidor = {
+  nome: 'gateway.saque',
+  eventos: ['saque.solicitado'],
+  async executar(deps, evento) {
+    const { saqueId } = payload<{ saqueId: string }>(evento);
+    await comAtor(deps.db, ATOR_SISTEMA, async (tx) => {
+      const [linha] = await tx
+        .select({ saque: saques, destino: contasRecebimento })
+        .from(saques)
+        .innerJoin(contasRecebimento, eq(contasRecebimento.id, saques.contaRecebimentoId))
+        .where(eq(saques.id, saqueId))
+        .for('update', { of: saques });
+      if (!linha || !['solicitado', 'pendente_configuracao'].includes(linha.saque.status)) return;
+      const { saque, destino } = linha;
+      const r = await gatewayDe(deps, saque.gateway).pagarPix({
+        saqueId: saque.id,
+        valorCentavos: saque.valorCentavos,
+        chave: decifrar(destino.chavePixCifrada),
+        tipoChave: destino.tipoChavePix as 'cpf',
+      });
+      if (r.status === 'ok') {
+        await tx
+          .update(saques)
+          .set({
+            status: 'concluido',
+            gatewayRef: r.gatewayRef,
+            ultimoErro: null,
+            concluidoEm: new Date(),
+          })
+          .where(eq(saques.id, saque.id));
+        await publicarEvento(tx, {
+          tipo: 'saque.concluido',
+          agregadoTipo: 'saque',
+          agregadoId: saque.id,
+          autoescolaId: saque.autoescolaId,
+          payload: { saqueId: saque.id },
+        });
+      } else if (r.status === 'pendente_configuracao') {
+        await tx
+          .update(saques)
+          .set({ status: 'pendente_configuracao', ultimoErro: r.motivo })
+          .where(eq(saques.id, saque.id));
+      } else if (r.reprocessar) {
+        throw new ErroReprocessavel(r.motivo);
+      } else {
+        await reverterSaque(tx, saque.id, r.motivo);
+      }
+    });
+  },
+};
+
 export const cancelarCobrancaExpirada: Consumidor = {
   nome: 'gateway.cancelar_cobranca',
   eventos: ['cobranca.expirada'],
@@ -254,5 +312,6 @@ export const CONSUMIDORES_PAGAMENTO = [
   processarWebhookPagamento,
   executarEstorno,
   executarRepasse,
+  executarSaque,
   cancelarCobrancaExpirada,
 ];

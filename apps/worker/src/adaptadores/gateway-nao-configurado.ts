@@ -24,6 +24,9 @@ export class GatewayNaoConfigurado implements GatewayPagamentoPort {
   transferir() {
     return this.pendente<{ gatewayTransferenciaId: string }>();
   }
+  pagarPix() {
+    return this.pendente<{ gatewayRef: string }>();
+  }
   interpretarWebhook() {
     return { tipo: 'invalido' as const, motivo: 'Gateway não configurado' };
   }

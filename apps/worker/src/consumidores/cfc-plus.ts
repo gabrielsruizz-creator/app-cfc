@@ -17,6 +17,7 @@ const EVENTOS: TipoEvento[] = [
   'pedido.confirmado',
   'pedido.recusado',
   'pedido.expirado',
+  'matricula.criada',
 ];
 
 /**
@@ -58,11 +59,23 @@ export const integrarCfcPlus: Consumidor = {
         },
         aluno: { cpf: linha.cpf, nome: linha.nome },
       };
+      const matriculaId =
+        evento.tipo === 'matricula.criada'
+          ? (evento.payload as { matriculaId: string }).matriculaId
+          : null;
+      const operacao =
+        evento.tipo === 'pedido.pago'
+          ? 'enviar_pedido'
+          : matriculaId
+            ? 'enviar_matricula'
+            : 'atualizar_pedido';
+      const tipoRegistro = matriculaId ? 'matricula' : 'pedido';
+      const idInterno = matriculaId ?? pedidoId;
       const r = await deps.cfcPlus.executar({
-        operacao: evento.tipo === 'pedido.pago' ? 'enviar_pedido' : 'atualizar_pedido',
+        operacao,
         autoescolaId: evento.autoescolaId!,
-        tipoRegistro: 'pedido',
-        idInterno: pedidoId,
+        tipoRegistro,
+        idInterno,
         cpfAluno: linha.cpf,
         dados: requisicao,
       });
@@ -71,8 +84,8 @@ export const integrarCfcPlus: Consumidor = {
         sistema: 'cfc_plus',
         operacao: evento.tipo,
         eventoOrigemId: evento.id,
-        tipoRegistro: 'pedido',
-        idInterno: pedidoId,
+        tipoRegistro,
+        idInterno,
         requisicao,
         resposta:
           r.status === 'sucesso' || r.status === 'erro' ? ((r.resposta ?? null) as never) : null,

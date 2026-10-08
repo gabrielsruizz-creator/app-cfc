@@ -48,5 +48,14 @@ export interface GatewayPagamentoPort {
     valorCentavos: number;
     destinoId: string | null;
   }): Promise<ResultadoExterno<{ gatewayTransferenciaId: string }>>;
+  /** Saque: transferência Pix para a chave do instrutor/autoescola. */
+  pagarPix(dados: DadosPagamentoPix): Promise<ResultadoExterno<{ gatewayRef: string }>>;
   interpretarWebhook(webhook: WebhookArmazenado): InterpretacaoWebhook;
 }
+
+export type DadosPagamentoPix = {
+  saqueId: string;
+  valorCentavos: number;
+  chave: string;
+  tipoChave: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria';
+};

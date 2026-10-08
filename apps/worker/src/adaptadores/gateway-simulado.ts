@@ -36,6 +36,10 @@ export class GatewaySimulado implements GatewayPagamentoPort {
     return { status: 'ok' as const, gatewayTransferenciaId: `sim_tra_${d.repasseId}` };
   }
 
+  async pagarPix(d: { saqueId: string }) {
+    return { status: 'ok' as const, gatewayRef: `sim_pix_${d.saqueId}` };
+  }
+
   interpretarWebhook(w: WebhookArmazenado) {
     const p = w.payload;
     if (p.evento === 'PAGAMENTO_CONFIRMADO' && typeof p.cobrancaGatewayId === 'string') {
