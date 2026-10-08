@@ -20,6 +20,8 @@ import {
   type Ator,
   type BancoTeste,
   contasFinanceiras,
+  comoSistema,
+  cupons,
 } from '../src';
 
 let banco: BancoTeste;
@@ -131,6 +133,62 @@ describe('isolamento entre autoescolas (RLS)', () => {
       tx.select({ id: pedidos.id }).from(pedidos),
     );
     expect(vistos.map((p) => p.id)).toEqual([p1.id]);
+  });
+
+  it('cupons: cada autoescola vê só os seus, não cria cupom bancado pela plataforma; o aluno não lê', async () => {
+    const { autoescola: a } = await fabricarAutoescola(banco.db);
+    const { autoescola: b } = await fabricarAutoescola(banco.db);
+    const { aluno } = await fabricarAluno(banco.db);
+    const atorA: Ator = { tipo: 'autoescola', autoescolaId: a.id };
+    const codigo = (s: string) => `${s}${Date.now().toString().slice(-6)}`;
+    await comAtor(banco.db, atorA, (tx) =>
+      tx.insert(cupons).values({
+        codigo: codigo('AE'),
+        tipo: 'percentual',
+        valor: 1000,
+        bancadoPor: 'vendedor',
+        autoescolaId: a.id,
+      }),
+    );
+    await comAtor(banco.db, ATOR_SISTEMA, (tx) =>
+      tx.insert(cupons).values({
+        codigo: codigo('BE'),
+        tipo: 'percentual',
+        valor: 1000,
+        bancadoPor: 'vendedor',
+        autoescolaId: b.id,
+      }),
+    );
+    const vistos = await comAtor(banco.db, atorA, (tx) => tx.select().from(cupons));
+    expect(vistos.map((c) => c.autoescolaId)).toEqual([a.id]);
+    await expect(
+      comAtor(banco.db, atorA, (tx) =>
+        tx.insert(cupons).values({
+          codigo: codigo('PL'),
+          tipo: 'valor_fixo',
+          valor: 5000,
+          bancadoPor: 'plataforma',
+          autoescolaId: a.id,
+        }),
+      ),
+    ).rejects.toSatisfy((e: { cause?: Error }) =>
+      /row-level security/.test(e.cause?.message ?? ''),
+    );
+    const doAluno = await comAtor(banco.db, { tipo: 'aluno', alunoId: aluno.id }, (tx) =>
+      tx.select().from(cupons),
+    );
+    expect(doAluno).toHaveLength(0);
+    // comoSistema eleva só dentro do bloco e restaura o aluno depois
+    const [dentro, depois] = await comAtor(
+      banco.db,
+      { tipo: 'aluno', alunoId: aluno.id },
+      async (tx) => {
+        const d = await comoSistema(tx, () => tx.select().from(cupons));
+        return [d, await tx.select().from(cupons)] as const;
+      },
+    );
+    expect(dentro.length).toBeGreaterThanOrEqual(2);
+    expect(depois).toHaveLength(0);
   });
 
   it('sem contexto definido, nada é retornado das tabelas protegidas', async () => {

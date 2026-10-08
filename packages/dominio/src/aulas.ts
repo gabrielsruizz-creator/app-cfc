@@ -18,6 +18,7 @@ import {
   type Tx,
 } from '@volante/db';
 import type { Ponto } from '@volante/db';
+import { atualizarUsoCupom } from './promocoes';
 import { ErroDominio, naoEncontrado } from './erros';
 import {
   estornarValor,
@@ -211,6 +212,8 @@ export async function confirmarPagamento(tx: Tx, cobrancaId: string, agora = new
   });
   await emitirRecibo(tx, pedido, agora);
 
+  if (!pedidoEstavaCancelado) await atualizarUsoCupom(tx, pedido.id, 'confirmado');
+
   if (pedido.tipo === 'pacote') {
     if (pedidoEstavaCancelado) {
       await estornarValor(tx, pedido, pedido.valorTotalCentavos, { motivo: 'pedido_expirado' });
@@ -287,6 +290,7 @@ export async function expirarAulaNaoPaga(tx: Tx, aulaId: string) {
   await movimentarCredito(tx, aula.creditoId, aula.id, 'devolucao', 'cancelado');
   const pedido = await carregarPedido(tx, aula.pedidoId);
   await mudarStatusPedido(tx, pedido, 'cancelado', { motivo: 'Pagamento não realizado no prazo' });
+  await atualizarUsoCupom(tx, pedido.id, 'cancelado');
   const pendentes = await tx
     .update(cobrancas)
     .set({ status: 'expirada' })
@@ -316,6 +320,7 @@ export async function cancelarPedidoNaoPago(tx: Tx, pedidoId: string, motivo: st
   const [p] = await tx.select().from(pedidos).where(eq(pedidos.id, pedidoId)).for('update');
   if (!p || p.tipo !== 'pacote' || p.status !== 'aguardando_pagamento') return false;
   await mudarStatusPedido(tx, p, 'cancelado', { motivo });
+  await atualizarUsoCupom(tx, p.id, 'cancelado');
   await tx.update(creditosAula).set({ status: 'cancelado' }).where(eq(creditosAula.pedidoId, p.id));
   const pendentes = await tx
     .update(cobrancas)

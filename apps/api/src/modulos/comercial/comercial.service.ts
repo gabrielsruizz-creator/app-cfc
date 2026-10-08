@@ -36,6 +36,7 @@ import {
 } from '@volante/dominio';
 import { CONFIG, type Config } from '../../config';
 import { BancoService } from '../../nucleo/banco.service';
+import { resumoCobranca } from '../aulas/aulas-consulta.service';
 
 type LinhaPacote = typeof pacotes.$inferSelect & { vendedorNome: string | null };
 
@@ -255,18 +256,10 @@ export class ComercialService {
         criadoEm: p.criadoEm.toISOString(),
         autoescolaId: p.autoescolaId,
         instrutorId: p.instrutorId,
-        cobranca: c
-          ? {
-              id: c.id,
-              status: c.status as NonNullable<ResumoPedido['cobranca']>['status'],
-              gateway: c.gateway,
-              valorCentavos: c.valorCentavos,
-              pixCopiaCola: c.pixCopiaCola,
-              pixQrCodeBase64: c.pixQrcodeBase64,
-              pixExpiraEm: c.pixExpiraEm?.toISOString() ?? null,
-              ambienteTeste: c.gateway === 'simulado',
-            }
-          : null,
+        cobranca: c ? resumoCobranca(c) : null,
+        valorBrutoCentavos: p.valorBrutoCentavos,
+        descontoCentavos: p.descontoCentavos,
+        cupomCodigo: p.snapshot.cupomCodigo ?? null,
         historico: historico.map((h) => ({
           paraStatus: h.paraStatus,
           motivo: h.motivo,

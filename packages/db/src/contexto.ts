@@ -36,3 +36,30 @@ export async function comAtor<T>(db: Db, ator: Ator, fn: (tx: Tx) => Promise<T>)
     return fn(tx);
   });
 }
+
+/**
+ * Executa `fn` como sistema dentro da transação atual e depois restaura o ator anterior.
+ * Para regras de domínio que precisam ler dados que o ator não vê (ex.: validar um cupom),
+ * sempre depois de a autorização já ter sido verificada.
+ */
+export async function comoSistema<T>(tx: Tx, fn: () => Promise<T>): Promise<T> {
+  const chaves = ['ator_tipo', 'usuario_id', 'aluno_id', 'instrutor_id', 'autoescola_id'] as const;
+  const resultado = await tx.execute(sql`
+    select ${sql.join(
+      chaves.map((c) => sql`coalesce(current_setting(${'app.' + c}, true), '') as ${sql.raw(c)}`),
+      sql`, `,
+    )}
+  `);
+  const antes = (resultado.rows[0] ?? {}) as Record<(typeof chaves)[number], string>;
+  await definirContexto(tx, ATOR_SISTEMA);
+  try {
+    return await fn();
+  } finally {
+    await tx.execute(sql`
+      select ${sql.join(
+        chaves.map((c) => sql`set_config(${'app.' + c}, ${antes[c] ?? ''}, true)`),
+        sql`, `,
+      )}
+    `);
+  }
+}

@@ -10,3 +10,6 @@ export * from './eventos';
 export * from './pacotes';
 export * from './comunicacao';
 export * from './financeiro';
+export * from './promocoes';
+export * from './rastreamento';
+export * from './relatorios';

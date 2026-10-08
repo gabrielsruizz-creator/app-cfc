@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { centavos, id, pontoGeo } from './comum';
-import { categoriaCnh, statusCobranca } from './enums';
+import { resumoCobranca } from './aulas';
+import { categoriaCnh } from './enums';
 
 export const pacoteEntrada = z.object({
   nome: z.string().trim().min(3).max(80),
@@ -25,7 +26,13 @@ export const pacote = pacoteEntrada.extend({
 });
 export type Pacote = z.infer<typeof pacote>;
 
-export const comprarPacote = z.object({ pacoteId: id });
+export const comprarPacote = z.object({
+  pacoteId: id,
+  cupom: z.string().trim().max(30).optional(),
+  metodo: z.enum(['pix', 'cartao']).default('pix'),
+  parcelas: z.number().int().min(1).max(12).default(1),
+});
+export type ComprarPacote = z.infer<typeof comprarPacote>;
 
 export const resumoPedido = z.object({
   id,
@@ -44,18 +51,10 @@ export const resumoPedido = z.object({
   criadoEm: z.string(),
   autoescolaId: id.nullable(),
   instrutorId: id.nullable(),
-  cobranca: z
-    .object({
-      id,
-      status: statusCobranca,
-      gateway: z.string(),
-      valorCentavos: z.number(),
-      pixCopiaCola: z.string().nullable(),
-      pixQrCodeBase64: z.string().nullable(),
-      pixExpiraEm: z.string().nullable(),
-      ambienteTeste: z.boolean(),
-    })
-    .nullable(),
+  cobranca: resumoCobranca.nullable(),
+  valorBrutoCentavos: z.number(),
+  descontoCentavos: z.number(),
+  cupomCodigo: z.string().nullable(),
   historico: z.array(
     z.object({ paraStatus: z.string(), motivo: z.string().nullable(), criadoEm: z.string() }),
   ),

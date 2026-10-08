@@ -11,6 +11,8 @@ export const solicitarAula = z.object({
   pontoEncontroReferencia: z.string().trim().max(200).optional(),
   /** Usar saldo de um pacote em vez de pagar uma aula avulsa (Fase 2). */
   creditoId: id.optional(),
+  /** Código de cupom de desconto (Fase 3). */
+  cupom: z.string().trim().max(30).optional(),
 });
 export type SolicitarAula = z.infer<typeof solicitarAula>;
 
@@ -19,7 +21,10 @@ export const resumoCobranca = z.object({
   status: statusCobranca,
   gateway: z.string(),
   metodo: z.string(),
+  parcelas: z.number(),
   valorCentavos: z.number(),
+  /** Cartão: página de pagamento do gateway. */
+  urlPagamento: z.string().nullable(),
   pixCopiaCola: z.string().nullable(),
   pixQrCodeBase64: z.string().nullable(),
   pixExpiraEm: z.string().nullable(),

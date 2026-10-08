@@ -9,7 +9,7 @@ import { ErroDominio, naoEncontrado } from './erros';
 import { estornarValor, retidoDoPedido } from './financeiro';
 
 /** Status em que uma aula pode ser contestada (o valor ainda está retido). */
-export const STATUS_CONTESTAVEIS = ['aguardando_confirmacao', 'confirmada'] as const;
+export const STATUS_CONTESTAVEIS = ['aguardando_confirmacao', 'confirmada', 'a_caminho'] as const;
 
 /**
  * Abre uma disputa. Enquanto aberta, a confirmação automática do fim da aula fica suspensa
@@ -26,7 +26,8 @@ export async function abrirDisputa(
   },
 ) {
   const aula = await carregarAulaParaAlterar(tx, d.aulaId);
-  const confirmadaVencida = aula.status === 'confirmada' && aula.fim < new Date();
+  const confirmadaVencida =
+    (aula.status === 'confirmada' || aula.status === 'a_caminho') && aula.fim < new Date();
   if (aula.status !== 'aguardando_confirmacao' && !confirmadaVencida) {
     throw new ErroDominio(
       'disputa_indisponivel',
@@ -101,7 +102,9 @@ export async function decidirDisputa(
   let valorEstorno = 0;
 
   if (d.decisao === 'estorno_total') {
-    const para = aula.status === 'confirmada' ? 'nao_compareceu_instrutor' : 'cancelada';
+    const para = ['confirmada', 'a_caminho'].includes(aula.status)
+      ? 'nao_compareceu_instrutor'
+      : 'cancelada';
     await encerrarComEstornoTotal(tx, aula, para, {
       motivo: `Disputa: ${d.resolucao}`,
       atorUsuarioId: d.ator.usuarioId,
@@ -110,7 +113,7 @@ export async function decidirDisputa(
     });
     valorEstorno = pedido.tipo === 'aula_avulsa' ? aula.valorCentavos : 0;
   } else {
-    if (aula.status === 'confirmada') {
+    if (aula.status === 'confirmada' || aula.status === 'a_caminho') {
       throw new ErroDominio(
         'aula_sem_checkout',
         'A aula não teve check-out; use estorno total ou aguarde o instrutor',

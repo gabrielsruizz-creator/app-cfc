@@ -34,6 +34,7 @@ export const payloadsEventos = {
     motivo: z.string(),
   }),
   'aula.remarcada': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
+  'aula.a_caminho': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
   'aula.checkin': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
   'aula.checkout': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
   'aula.concluida': z.object({ aulaId: id, alunoId: id, instrutorId: id }),

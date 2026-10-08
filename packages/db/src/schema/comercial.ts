@@ -85,6 +85,8 @@ export type SnapshotPedido = {
   duracaoAulaMin: number;
   precoUnitarioCentavos: number;
   vendedorNome: string;
+  /** [F3] Cupom aplicado na compra. */
+  cupomCodigo?: string;
 };
 
 export const pedidos = pgTable(
@@ -121,6 +123,8 @@ export const pedidos = pgTable(
     expiradoEm: instanteTz(),
     lembreteEnviadoEm: instanteTz(),
     prazoRespostaEm: instanteTz(),
+    /** [F3] FK para cupons (criada na migração, para evitar import circular). */
+    cupomId: uuid(),
     ...carimbos,
   },
   (t) => [
@@ -277,7 +281,10 @@ export const cobrancas = pgTable(
     status: text().notNull().default('pendente_envio'),
     pixCopiaCola: text(),
     pixQrcodeBase64: text(),
+    /** Prazo para pagar (Pix ou link do cartão). */
     pixExpiraEm: instanteTz(),
+    /** [F3] Cartão: página de pagamento do gateway (o app nunca recebe dados do cartão). */
+    urlPagamento: text(),
     pagoEm: instanteTz(),
     valorEstornadoCentavos: bigint({ mode: 'number' }).notNull().default(0),
     chaveIdempotencia: text().notNull(),
@@ -291,6 +298,10 @@ export const cobrancas = pgTable(
     checkValores('cobrancas_status_ck', t.status, STATUS_COBRANCA),
     checkValores('cobrancas_gateway_ck', t.gateway, GATEWAYS),
     checkValores('cobrancas_metodo_ck', t.metodo, ['pix', 'cartao']),
+    check(
+      'cobrancas_parcelas_ck',
+      sql`${t.parcelas} between 1 and 12 and (${t.metodo} = 'cartao' or ${t.parcelas} = 1)`,
+    ),
     index('cobrancas_pedido_idx').on(t.pedidoId),
   ],
 );

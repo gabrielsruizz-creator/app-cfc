@@ -7,3 +7,5 @@ export * from './agendamento';
 export * from './pacotes';
 export * from './moderacao';
 export * from './cifra';
+export * from './promocoes';
+export * from './rastreamento';

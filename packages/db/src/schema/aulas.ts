@@ -166,3 +166,50 @@ export const avaliacoes = pgTable(
     index('avaliacoes_instrutor_idx').on(t.instrutorId, t.criadoEm),
   ],
 );
+
+/**
+ * [F3] Posição do instrutor durante a aula (de "a caminho" até o check-out), para o aluno e o
+ * contato de confiança acompanharem. Expurgada após 30 dias.
+ */
+export const aulaPosicoes = pgTable(
+  'aula_posicoes',
+  {
+    id: idPk(),
+    aulaId: uuid()
+      .notNull()
+      .references(() => aulas.id),
+    alunoId: uuid()
+      .notNull()
+      .references(() => alunos.id),
+    instrutorId: uuid()
+      .notNull()
+      .references(() => instrutores.id),
+    posicao: geografiaPonto().notNull(),
+    precisaoM: integer(),
+    registradoEm: instanteTz().notNull().defaultNow(),
+  },
+  (t) => [index('aula_posicoes_aula_idx').on(t.aulaId, t.registradoEm)],
+);
+
+/** [F3] Link temporário para um contato de confiança acompanhar a aula (o token só existe no link). */
+export const aulaCompartilhamentos = pgTable(
+  'aula_compartilhamentos',
+  {
+    id: idPk(),
+    aulaId: uuid()
+      .notNull()
+      .references(() => aulas.id),
+    alunoId: uuid()
+      .notNull()
+      .references(() => alunos.id),
+    tokenHash: text().notNull(),
+    contatoNome: text(),
+    expiraEm: instanteTz().notNull(),
+    revogadoEm: instanteTz(),
+    ...carimbos,
+  },
+  (t) => [
+    uniqueIndex('aula_compartilhamentos_token_uk').on(t.tokenHash),
+    index('aula_compartilhamentos_aula_idx').on(t.aulaId),
+  ],
+);

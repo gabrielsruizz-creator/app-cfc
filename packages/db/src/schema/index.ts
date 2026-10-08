@@ -6,3 +6,4 @@ export * from './aulas';
 export * from './nucleo';
 export * from './comunicacao';
 export * from './moderacao';
+export * from './promocoes';

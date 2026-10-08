@@ -20,12 +20,12 @@ import {
 import { gerarCodigoPedido } from './codigos';
 import { ErroDominio, naoEncontrado } from './erros';
 import {
-  calcularComissao,
-  estornarValor,
-  liberarValor,
-  regraComissaoVigente,
-  retidoDoPedido,
-} from './financeiro';
+  reservarUsoCupom,
+  resolverCupom,
+  VALOR_MINIMO_COBRANCA_CENTAVOS,
+  valoresDoPedido,
+} from './promocoes';
+import { estornarValor, liberarValor, regraComissaoVigente, retidoDoPedido } from './financeiro';
 
 type Pedido = typeof pedidos.$inferSelect;
 
@@ -45,6 +45,9 @@ async function nomeVendedor(tx: Tx, p: typeof pacotes.$inferSelect): Promise<str
   return i?.nome ?? 'Instrutor';
 }
 
+/** Prazo para pagar pelo link do cartão. */
+export const PRAZO_LINK_CARTAO_MIN = 24 * 60;
+
 /**
  * Aluno compra um pacote de aulas (de instrutor ou de autoescola). Cria pedido, crédito
  * (ainda inativo) e cobrança Pix. O valor fica RETIDO quando o pagamento é confirmado.
@@ -56,6 +59,10 @@ export async function comprarPacote(
     pacoteId: string;
     gateway: Gateway;
     chaveIdempotencia: string;
+    cupom?: string | null;
+    /** Pix (padrão) ou cartão de crédito, com até `parcelasMax` parcelas do pacote. */
+    metodo?: 'pix' | 'cartao';
+    parcelas?: number;
     agora?: Date;
   },
 ) {
@@ -81,7 +88,31 @@ export async function comprarPacote(
     instrutorId: p.instrutorId,
     autoescolaId: p.autoescolaId,
   });
-  const comissao = calcularComissao(p.precoCentavos, regra);
+  const cupom = d.cupom
+    ? await resolverCupom(tx, {
+        codigo: d.cupom,
+        alunoId: d.alunoId,
+        produtoTipo: 'pacote',
+        instrutorId: p.instrutorId,
+        autoescolaId: p.autoescolaId,
+        valorBrutoCentavos: p.precoCentavos,
+        agora,
+      })
+    : null;
+  const valores = valoresDoPedido(p.precoCentavos, regra, cupom);
+  const metodo = d.metodo ?? 'pix';
+  const parcelas = metodo === 'cartao' ? (d.parcelas ?? 1) : 1;
+  if (parcelas > p.parcelasMax) {
+    throw new ErroDominio(
+      'parcelas_invalidas',
+      p.parcelasMax === 1
+        ? 'Este pacote é só à vista'
+        : `Este pacote pode ser parcelado em até ${p.parcelasMax}x`,
+    );
+  }
+  if (valores.valorTotalCentavos / parcelas < VALOR_MINIMO_COBRANCA_CENTAVOS) {
+    throw new ErroDominio('parcelas_invalidas', 'Cada parcela precisa ser de pelo menos R$ 5,00');
+  }
   const cfg = await lerConfiguracoes(tx);
 
   const [pedido] = await tx
@@ -101,16 +132,16 @@ export async function comprarPacote(
         duracaoAulaMin: p.duracaoAulaMin,
         precoUnitarioCentavos: Math.round(p.precoCentavos / p.quantidadeAulas),
         vendedorNome: await nomeVendedor(tx, p),
+        ...(cupom ? { cupomCodigo: cupom.cupom.codigo } : {}),
       },
       quantidadeAulas: p.quantidadeAulas,
-      valorBrutoCentavos: p.precoCentavos,
-      valorTotalCentavos: p.precoCentavos,
+      ...valores,
       comissaoBp: regra.percentualBp,
-      comissaoCentavos: comissao,
       regraComissaoId: regra.id,
-      valorLiquidoVendedorCentavos: p.precoCentavos - comissao,
+      cupomId: cupom?.cupom.id ?? null,
     })
     .returning();
+  if (cupom) await reservarUsoCupom(tx, pedido!, cupom);
 
   await tx.insert(creditosAula).values({
     pedidoId: pedido!.id,
@@ -131,9 +162,14 @@ export async function comprarPacote(
       instrutorId: p.instrutorId,
       autoescolaId: p.autoescolaId,
       gateway: d.gateway,
-      metodo: 'pix',
-      valorCentavos: p.precoCentavos,
-      pixExpiraEm: new Date(agora.getTime() + cfg['aula.pix_expira_min'] * 60_000),
+      metodo,
+      parcelas,
+      valorCentavos: valores.valorTotalCentavos,
+      // O link do cartão fica aberto por mais tempo que o Pix (o pacote não segura horário).
+      pixExpiraEm: new Date(
+        agora.getTime() +
+          (metodo === 'cartao' ? PRAZO_LINK_CARTAO_MIN : cfg['aula.pix_expira_min']) * 60_000,
+      ),
       chaveIdempotencia: d.chaveIdempotencia,
     })
     .returning();

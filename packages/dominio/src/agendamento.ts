@@ -26,7 +26,8 @@ import { calcularHorariosLivres, dataLocal, type Intervalo } from './agenda';
 import { gerarCodigoCheckin, gerarCodigoPedido } from './codigos';
 import { codigoErroPostgres, ErroDominio, naoEncontrado } from './erros';
 import { calcularAceiteAte, movimentarCredito } from './aulas';
-import { calcularComissao, regraComissaoVigente } from './financeiro';
+import { regraComissaoVigente } from './financeiro';
+import { reservarUsoCupom, resolverCupom, valoresDoPedido } from './promocoes';
 import { validarCreditoParaInstrutor } from './pacotes';
 
 export async function carregarInstrutorAtivo(tx: Executor, instrutorId: string) {
@@ -101,6 +102,8 @@ export type DadosSolicitacao = {
   pontoEncontroReferencia?: string | null;
   gateway: Gateway;
   chaveIdempotencia: string;
+  /** Código de cupom (opcional). */
+  cupom?: string | null;
   agora?: Date;
 };
 
@@ -149,8 +152,19 @@ export async function solicitarAulaAvulsa(tx: Tx, d: DadosSolicitacao) {
   const regra = await regraComissaoVigente(tx, 'instrutor', 'aula_avulsa', {
     instrutorId: instrutor.id,
   });
-  const valor = instrutor.precoAulaCentavos;
-  const comissao = calcularComissao(valor, regra);
+  const cupom = d.cupom
+    ? await resolverCupom(tx, {
+        codigo: d.cupom,
+        alunoId: d.alunoId,
+        produtoTipo: 'aula_avulsa',
+        instrutorId: instrutor.id,
+        autoescolaId: null,
+        valorBrutoCentavos: instrutor.precoAulaCentavos,
+        agora,
+      })
+    : null;
+  const valores = valoresDoPedido(instrutor.precoAulaCentavos, regra, cupom);
+  const valor = valores.valorTotalCentavos;
 
   const [pedido] = await tx
     .insert(pedidos)
@@ -165,18 +179,18 @@ export async function solicitarAulaAvulsa(tx: Tx, d: DadosSolicitacao) {
         categorias: [d.categoria],
         quantidadeAulas: 1,
         duracaoAulaMin: instrutor.duracaoAulaMin,
-        precoUnitarioCentavos: valor,
+        precoUnitarioCentavos: instrutor.precoAulaCentavos,
         vendedorNome: nomeInstrutor,
+        ...(cupom ? { cupomCodigo: cupom.cupom.codigo } : {}),
       },
       quantidadeAulas: 1,
-      valorBrutoCentavos: valor,
-      valorTotalCentavos: valor,
+      ...valores,
       comissaoBp: regra.percentualBp,
-      comissaoCentavos: comissao,
       regraComissaoId: regra.id,
-      valorLiquidoVendedorCentavos: valor - comissao,
+      cupomId: cupom?.cupom.id ?? null,
     })
     .returning();
+  if (cupom) await reservarUsoCupom(tx, pedido!, cupom);
 
   const [credito] = await tx
     .insert(creditosAula)
