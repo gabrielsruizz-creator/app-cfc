@@ -126,3 +126,27 @@ export const reais = (centavos: number) =>
 
 export const dataHora = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+/** Baixa um arquivo protegido (ex.: CSV de relatório) com o nome indicado. */
+export async function baixar(caminho: string, nomeArquivo: string) {
+  const r = await fetch(`${BASE}${caminho}`, { headers: cabecalhos() });
+  if (!r.ok) throw new ErroApi(r.status, 'download', 'Não foi possível baixar o arquivo');
+  const url = URL.createObjectURL(await r.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Valor curto para eixos de gráfico: R$ 900, R$ 1,5 mil, R$ 2,3 mi. */
+export const reaisCurto = (centavos: number) => {
+  const v = centavos / 100;
+  if (v >= 1_000_000)
+    return `R$ ${(v / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`;
+  if (v >= 1000)
+    return `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
+  return `R$ ${v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+};

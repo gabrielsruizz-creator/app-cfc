@@ -196,11 +196,14 @@ export function GraficoColunas({
   titulo,
   dados,
   formatarValor = numero,
+  formatarEixo,
   unidade,
 }: {
   titulo: string;
   dados: { rotulo: string; rotuloCurto: string; valor: number }[];
   formatarValor?: (n: number) => string;
+  /** Rótulos do eixo (padrão: formatarValor). */
+  formatarEixo?: (n: number) => string;
   /** Ex.: ['aula', 'aulas'] para a dica "17 aulas". */
   unidade?: [string, string];
 }) {
@@ -210,7 +213,7 @@ export function GraficoColunas({
   const [tabela, setTabela] = useState(false);
   const L = 720;
   const A = 220;
-  const m = { t: 12, r: 8, b: 26, l: 36 };
+  const m = { t: 12, r: 8, b: 26, l: formatarEixo ? 64 : 36 };
   const largura = L - m.l - m.r;
   const altura = A - m.t - m.b;
   const topo = topoLimpo(Math.max(0, ...dados.map((d) => d.valor)));
@@ -260,7 +263,7 @@ export function GraficoColunas({
               <g key={t}>
                 <line className="linha-grade" x1={m.l} x2={L - m.r} y1={y(t)} y2={y(t)} />
                 <text className="eixo" x={m.l - 6} y={y(t) + 4} textAnchor="end">
-                  {formatarValor(t)}
+                  {(formatarEixo ?? formatarValor)(t)}
                 </text>
               </g>
             ))}

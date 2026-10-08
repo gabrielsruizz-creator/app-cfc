@@ -157,6 +157,8 @@ describe('Fase 3 — cupons, cartão, rastreamento e relatórios', () => {
       })
       .expect(201);
     const pacoteId = pacote.body[0].id as string;
+    const publico = await ctx.http().get(`/publico/pacotes/${pacoteId}`).expect(200);
+    expect(publico.body).toMatchObject({ parcelasMax: 6, vendedorNome: 'Autoescola Relatorios' });
     const aluno = await alunoCompleto(ctx);
     const hal = auth(aluno.token);
     await ctx

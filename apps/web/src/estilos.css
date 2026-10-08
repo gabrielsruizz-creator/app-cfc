@@ -521,9 +521,21 @@ pre {
   font-weight: 650;
   color: var(--texto);
 }
+.indicador.heroi {
+  container-type: inline-size;
+}
+/* Com espaço, a figura principal ganha uma coluna mais larga (as grades com destaque têm 4 cartões). */
+@media (min-width: 1100px) {
+  .grade:has(> .indicador.heroi) {
+    grid-template-columns: 1.7fr 1fr 1fr 1fr;
+  }
+}
 .indicador.heroi .valor {
-  font-size: 52px;
+  /* cabe no cartão: valores em reais são mais largos que contagens */
+  font-size: clamp(30px, 2.8vw, 52px);
+  font-size: clamp(30px, 15cqi, 52px);
   line-height: 1.05;
+  white-space: nowrap;
 }
 .indicador .detalhe {
   color: var(--texto-suave);

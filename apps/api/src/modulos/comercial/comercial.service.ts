@@ -152,14 +152,17 @@ export class ComercialService {
   async pacotesPublicos(filtro: {
     instrutorId?: string;
     autoescolaId?: string;
+    pacoteId?: string;
   }): Promise<Pacote[]> {
     return this.banco.comAtor({ tipo: 'anonimo' }, async (tx) => {
       const linhas = await this.consultaPacotes(tx)
         .where(
           and(
-            filtro.instrutorId
-              ? eq(pacotes.instrutorId, filtro.instrutorId)
-              : eq(pacotes.autoescolaId, filtro.autoescolaId!),
+            filtro.pacoteId
+              ? eq(pacotes.id, filtro.pacoteId)
+              : filtro.instrutorId
+                ? eq(pacotes.instrutorId, filtro.instrutorId)
+                : eq(pacotes.autoescolaId, filtro.autoescolaId!),
             eq(pacotes.publicado, true),
             isNull(pacotes.arquivadoEm),
           ),
@@ -167,6 +170,12 @@ export class ComercialService {
         .orderBy(asc(pacotes.precoCentavos));
       return linhas.map((l) => paraPacote({ ...l.p, vendedorNome: l.vendedorNome }));
     });
+  }
+
+  async pacotePublico(pacoteId: string): Promise<Pacote> {
+    const [p] = await this.pacotesPublicos({ pacoteId });
+    if (!p) throw naoEncontrado('pacote');
+    return p;
   }
 
   // ---------- Aluno: pedidos e saldo ----------

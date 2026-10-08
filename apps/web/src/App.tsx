@@ -14,7 +14,10 @@ import { AdminInstrutor, AdminInstrutores } from './paginas/admin/Instrutores';
 import { AdminDenuncias, AdminDisputas, AdminUsuarios } from './paginas/admin/Moderacao';
 import { AdminOperacoes } from './paginas/admin/Operacoes';
 import { AutoescolaCadastro } from './paginas/autoescola/Cadastro';
+import { PainelCupons } from './componentes/Cupons';
 import { PainelFinanceiro } from './componentes/Financeiro';
+import { RelatoriosAdmin, RelatoriosAutoescola } from './componentes/Relatorios';
+import { Acompanhar } from './paginas/Acompanhar';
 import {
   AutoescolaAgenda,
   AutoescolaAlunos,
@@ -112,7 +115,9 @@ function Layout({ area }: { area: 'admin' | 'autoescola' }) {
               Operações {contador(resumo.data?.eventosComFalha)}
             </NavLink>
             <NavLink to="/admin/auditoria">Auditoria</NavLink>
+            <NavLink to="/admin/relatorios">Relatórios</NavLink>
             <span className="rotulo">Regras</span>
+            <NavLink to="/admin/cupons">Cupons</NavLink>
             <NavLink to="/admin/comissoes">Comissões</NavLink>
             <NavLink to="/admin/configuracoes">Configurações</NavLink>
           </>
@@ -151,7 +156,9 @@ function Layout({ area }: { area: 'admin' | 'autoescola' }) {
             <NavLink to="/autoescola/pacotes">Pacotes</NavLink>
             <NavLink to="/autoescola/vitrine">Vitrine</NavLink>
             <NavLink to="/autoescola/avaliacoes">Avaliações</NavLink>
+            <NavLink to="/autoescola/cupons">Cupons</NavLink>
             <NavLink to="/autoescola/financeiro">Financeiro</NavLink>
+            <NavLink to="/autoescola/relatorios">Relatórios</NavLink>
             <NavLink to="/autoescola/integracoes">Integrações</NavLink>
           </>
         )}
@@ -218,6 +225,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<Inicio />} />
       <Route path="/entrar" element={<Entrar />} />
+      <Route path="/acompanhar/:token" element={<Acompanhar />} />
       <Route path="/autoescola/cadastro" element={<AutoescolaCadastro />} />
       <Route path="/admin" element={<Protegido area="admin" />}>
         <Route index element={<AdminInicio />} />
@@ -229,6 +237,8 @@ export function App() {
         <Route path="usuarios" element={<AdminUsuarios />} />
         <Route path="disputas" element={<AdminDisputas />} />
         <Route path="denuncias" element={<AdminDenuncias />} />
+        <Route path="relatorios" element={<RelatoriosAdmin />} />
+        <Route path="cupons" element={<PainelCupons area="admin" />} />
         <Route path="operacoes" element={<AdminOperacoes />} />
         <Route path="auditoria" element={<AdminAuditoria />} />
         <Route path="comissoes" element={<AdminComissoes />} />
@@ -245,6 +255,8 @@ export function App() {
         <Route path="vitrine" element={<AutoescolaVitrine />} />
         <Route path="avaliacoes" element={<AutoescolaAvaliacoes />} />
         <Route path="financeiro" element={<PainelFinanceiro base="/autoescola" />} />
+        <Route path="cupons" element={<PainelCupons area="autoescola" />} />
+        <Route path="relatorios" element={<RelatoriosAutoescola />} />
         <Route path="integracoes" element={<AutoescolaIntegracoes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

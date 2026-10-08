@@ -118,6 +118,12 @@ export class ComercialController {
     return this.servico.pacotesPublicos({ instrutorId: id });
   }
 
+  @Publico()
+  @Get('publico/pacotes/:id')
+  pacote(@Param('id', ParseUUIDPipe) id: string) {
+    return this.servico.pacotePublico(id);
+  }
+
   // ---------- Aluno ----------
   @Post('aluno/pedidos')
   comprar(
