@@ -36,10 +36,16 @@ export function lerConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
 export const CONFIG = Symbol('CONFIG');
 
-/** Base pública do painel: URL_PAINEL, ou o próprio serviço no Render (/painel), ou o Vite local. */
-export function urlPainel(c: Config): string {
+/**
+ * Base pública do painel: URL_PAINEL, ou o próprio serviço no Render (/painel), ou o Vite
+ * (porta 5173) no mesmo computador que o app usou para chegar à API — no celular, o IP da rede local.
+ */
+export function urlPainel(c: Config, hostDaRequisicao?: string): string {
+  const maquina = hostDaRequisicao?.split(':')[0];
   const base =
     c.URL_PAINEL ??
-    (c.RENDER_EXTERNAL_URL ? `${c.RENDER_EXTERNAL_URL}/painel` : 'http://localhost:5173');
+    (c.RENDER_EXTERNAL_URL
+      ? `${c.RENDER_EXTERNAL_URL}/painel`
+      : `http://${maquina || 'localhost'}:5173`);
   return base.replace(/\/$/, '');
 }

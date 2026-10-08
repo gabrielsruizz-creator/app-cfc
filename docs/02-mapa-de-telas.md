@@ -1,6 +1,6 @@
 # Mapa de telas — v0.1 (para aprovação)
 
-> Status: **aprovado**; telas da Fase 1 implementadas em `apps/mobile` e `apps/web`. Cada tela indica a fase: **[F1]**, **[F2]**, **[F3]**.
+> Status: **aprovado**; telas das Fases 1, 2 e 3 implementadas em `apps/mobile` e `apps/web`. Cada tela indica a fase: **[F1]**, **[F2]**, **[F3]**.
 > Interface em português do Brasil, tema claro/escuro, alvos de toque ≥ 44 px, contraste AA, suporte a leitor de tela e fonte ampliada.
 
 ---

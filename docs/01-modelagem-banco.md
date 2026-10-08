@@ -1,6 +1,6 @@
 # Modelagem do banco de dados — v0.1 (para aprovação)
 
-> Status: **aprovada e implementada nas Fases 1 e 2** (veja "Ajustes feitos na implementação" abaixo). Cada tabela está marcada com a fase em que entra: **[F1]**, **[F2]**, **[F3]**, **[F4]**.
+> Status: **aprovada e implementada nas Fases 1, 2 e 3** (veja "Ajustes feitos na implementação" abaixo). Cada tabela está marcada com a fase em que entra: **[F1]**, **[F2]**, **[F3]**, **[F4]**.
 > Tabelas de fases futuras aparecem aqui para que a Fase 1 já nasça compatível com elas (sem migrações destrutivas depois).
 
 ## Ajustes feitos na implementação (Fase 1)
@@ -28,6 +28,19 @@
 | Saques               | `contas_recebimento` guarda a chave Pix **cifrada** (AES-256-GCM, `CHAVE_CIFRAGEM`) e mascarada; `saques` debita o disponível na hora e o worker envia o Pix (falha definitiva devolve o valor; sem gateway fica "pendente de configuração"). |
 | Chat                 | `conversas` + `mensagens` com RLS por participante; o app alerta (sem bloquear) quando a mensagem parece conter telefone.                                                                                                                     |
 | Disputas e denúncias | `disputas` (por aula: estorno total, parcial ou negada, com auditoria) e `denuncias` (sigilosas). Aula com disputa aberta não é confirmada automaticamente.                                                                                   |
+
+## Ajustes feitos na implementação (Fase 3)
+
+| Tema                    | Como ficou                                                                                                                                                                                                                                                     |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cupons                  | `cupons` + `cupom_usos` (sem tabela `campanhas`: a campanha é um campo do cupom). Uso **reservado** na compra, **confirmado** no pagamento e **cancelado** se o pedido não for pago (o cupom volta a valer). Código em maiúsculas e único.                     |
+| Quem paga o desconto    | `plataforma`: comissão = comissão sobre o bruto − desconto (pode ficar negativa: a plataforma subsidia) e o vendedor recebe o líquido de sempre. `vendedor`: comissão sobre o valor com desconto. Em ambos `líquido + comissão = total`.                       |
+| Cobrança mínima         | O desconto nunca deixa o valor abaixo de R$ 5,00 (mínimo dos meios de pagamento); cada parcela do cartão também tem no mínimo R$ 5,00.                                                                                                                         |
+| Cartão                  | Só para pacotes, em até `parcelas_max` vezes sem juros. O aluno paga na página do gateway (`cobrancas.url_pagamento`); nenhum dado de cartão passa pela plataforma. No Asaas, parcelado = um `installment`, estornado/cancelado como um todo.                  |
+| Prazo do link do cartão | 24 h (a coluna `pix_expira_em` guarda o prazo de qualquer cobrança). Pacote não pago no prazo é cancelado.                                                                                                                                                     |
+| A caminho               | Liberado a partir de 3 h antes do início. `aula_posicoes` recebe a posição do instrutor (no máximo uma a cada 5 s) de "a caminho" até o check-out; expurgada após 30 dias. Estimativa de chegada pela distância em linha reta a 25 km/h.                       |
+| Contato de confiança    | `aula_compartilhamentos` guarda só o hash (SHA-256) do token; o link vale até 2 h depois do fim da aula e pode ser revogado. A página pública mostra o primeiro nome do aluno, instrutor, veículo, horário, ponto de encontro e a posição (só durante a aula). |
+| Elevação pontual        | `comoSistema(tx, fn)` executa uma regra como sistema e restaura o ator (ex.: validar cupom, que o aluno não pode ler pela RLS).                                                                                                                                |
 
 ---
 

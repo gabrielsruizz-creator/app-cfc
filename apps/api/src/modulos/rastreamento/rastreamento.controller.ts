@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   Delete,
   Get,
   HttpCode,
@@ -60,8 +61,9 @@ export class RastreamentoController {
     @SessaoAtual() s: Sessao,
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodPipe(criarCompartilhamento)) d: { contatoNome?: string },
+    @Headers('host') host?: string,
   ) {
-    return this.servico.compartilhar(atorAluno(s), id, d.contatoNome);
+    return this.servico.compartilhar(atorAluno(s), id, d.contatoNome, host);
   }
 
   @HttpCode(204)

@@ -66,13 +66,14 @@ export class RastreamentoService {
     ator: Ator & { alunoId: string },
     aulaId: string,
     contatoNome?: string,
+    host?: string,
   ): Promise<Compartilhamento> {
     const { compartilhamento, token } = await this.banco.comAtor(ator, (tx) =>
       criarCompartilhamento(tx, { aulaId, alunoId: ator.alunoId, contatoNome }),
     );
     return {
       id: compartilhamento.id,
-      url: `${urlPainel(this.config)}/acompanhar/${token}`,
+      url: `${urlPainel(this.config, host)}/acompanhar/${token}`,
       contatoNome: compartilhamento.contatoNome,
       expiraEm: compartilhamento.expiraEm.toISOString(),
     };

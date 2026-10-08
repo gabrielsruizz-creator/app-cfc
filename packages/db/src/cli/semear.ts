@@ -9,7 +9,7 @@ carregarEnv();
 import { hash } from '@node-rs/argon2';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { conectarAplicacao, type Db } from '../cliente';
 import { ATOR_SISTEMA, comAtor } from '../contexto';
 import { cnpjAleatorio } from '../fabricas';
@@ -20,6 +20,7 @@ import {
   autoescolaHorarios,
   autoescolaMembros,
   autoescolas,
+  cupons,
   disponibilidadesSemanais,
   instrutorDocumentos,
   instrutorVinculos,
@@ -411,6 +412,44 @@ async function semearDemo(db: Db) {
           inicioEm: new Date(),
         });
       }
+    }
+
+    // Fase 3: cupons de exemplo e parcelamento no cartão (uma vez só)
+    const [temCupom] = await tx
+      .select({ id: cupons.id })
+      .from(cupons)
+      .where(eq(cupons.codigo, 'BEMVINDO'));
+    if (!temCupom) {
+      await tx.insert(cupons).values([
+        {
+          codigo: 'BEMVINDO',
+          campanha: 'Demonstração',
+          descricao: '10% de desconto na primeira compra (até R$ 20,00)',
+          tipo: 'percentual',
+          valor: 1000,
+          descontoMaximoCentavos: 2000,
+          bancadoPor: 'plataforma',
+          apenasPrimeiraCompra: true,
+        },
+        {
+          codigo: 'MATRICULA100',
+          descricao: 'R$ 100,00 de desconto em pacotes da Autoescola Demo',
+          tipo: 'valor_fixo',
+          valor: 10000,
+          produtoTipo: 'pacote',
+          autoescolaId,
+          bancadoPor: 'vendedor',
+          limiteTotal: 100,
+        },
+      ]);
+      await tx
+        .update(pacotes)
+        .set({ parcelasMax: 10 })
+        .where(and(eq(pacotes.autoescolaId, autoescolaId), eq(pacotes.parcelasMax, 1)));
+      await tx
+        .update(pacotes)
+        .set({ parcelasMax: 3 })
+        .where(and(isNotNull(pacotes.instrutorId), eq(pacotes.parcelasMax, 1)));
     }
   });
   console.log(

@@ -7,6 +7,8 @@ export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
   server: {
     port: 5173,
+    // Acessível na rede local: o link "acompanhar aula" abre no celular do contato.
+    host: true,
     // Em desenvolvimento, /api é encaminhado para a API local.
     proxy: { '/api': { target: 'http://localhost:3000', rewrite: (p) => p.replace(/^\/api/, '') } },
   },

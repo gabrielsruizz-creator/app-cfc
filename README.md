@@ -104,6 +104,27 @@ coloque `DEMO_LAT=-22.9068` e `DEMO_LNG=-43.1729` (exemplo: Rio de Janeiro) no `
 
 Prazos da fila (lembrete em 48 h e expiração em 5 dias) e demais regras ficam em **Admin › Configurações**.
 
+### Roteiro de teste da Fase 3
+
+1. **Cupom e cartão parcelado:** no app (aluno), Autoescola Demo → **Comprar** um pacote. No resumo, aplique o cupom
+   `MATRICULA100` (R$ 100 de desconto, pago pela autoescola), escolha **Cartão de crédito** e o número de parcelas
+   (até 10x) → **Simular pagamento**. Em produção, o botão "Pagar com cartão" abre a página segura do Asaas.
+   O cupom `BEMVINDO` (10% na primeira compra, pago pela plataforma) também vale para aulas avulsas.
+2. **Cupons no painel:** **Admin › Cupons** cria cupons para todos ou para um parceiro, escolhendo quem paga o desconto
+   (plataforma: o vendedor recebe o valor cheio; vendedor: a comissão é sobre o valor com desconto).
+   A autoescola cria os próprios cupons em **Cupons**.
+3. **Instrutor a caminho:** com uma aula confirmada para as próximas 3 horas, o instrutor toca **Estou a caminho** na
+   tela da aula. Enquanto essa tela estiver aberta, a posição dele é enviada a cada ~10 s.
+4. **Mapa do aluno:** a tela da aula mostra o instrutor no mapa e a estimativa de chegada.
+5. **Contato de confiança:** **Compartilhar aula** gera um link (sem login) que mostra o mapa e os dados da aula até
+   2 horas depois do fim; dá para desativar a qualquer momento. No computador, o link usa o IP da sua rede
+   (porta 5173), então abre em outro celular conectado ao mesmo Wi-Fi. Para outro endereço, defina `URL_PAINEL`.
+6. **Relatórios:** **Relatórios** no painel da autoescola (vendas, conversão da fila, tempo até o primeiro contato,
+   aulas por instrutor, cupons) e do admin (vendas por dia, formas de pagamento, maiores vendedores), com
+   **Exportar vendas (CSV)**, que abre direto no Excel.
+
+As posições do instrutor só são gravadas entre "a caminho" e o check-out e são apagadas depois de 30 dias.
+
 ### Pagamento em modo de teste
 
 Com `PAGAMENTO_GATEWAY=simulado` (já é o valor do `.env.exemplo`), o Pix gerado é fictício. Na tela de pagamento do app aparece
@@ -130,9 +151,10 @@ pnpm test        # usa um Postgres real (TEST_DATABASE_URL; padrão: postgres://
 Cobrem: isolamento entre autoescolas (RLS), agenda sem conflito mesmo com reservas simultâneas,
 fluxo do dinheiro (retenção, liberação com comissão, estornos, multa), auditoria imutável,
 worker (Pix simulado, gateway não configurado, novas tentativas, prazos, documentos vencidos),
-adaptador Asaas, os fluxos completos das Fases 1 e 2 pela API (fila da autoescola, pacotes, saldo de aulas,
-chat, financeiro, disputas, moderação) e as rotinas do worker (lembrete/expiração de pedidos, validade de pacotes,
-saque via Pix com devolução em caso de falha).
+adaptador Asaas (Pix e cartão parcelado), os fluxos completos das Fases 1, 2 e 3 pela API (fila da autoescola,
+pacotes, saldo de aulas, chat, financeiro, disputas, moderação, cupons, cartão, rastreamento, link do contato de
+confiança, relatórios e CSV) e as rotinas do worker (lembrete/expiração de pedidos, validade de pacotes, saque via Pix
+com devolução em caso de falha, expurgo de posições).
 
 ## Fases
 
@@ -140,5 +162,6 @@ saque via Pix com devolução em caso de falha).
   agendamento com instrutor autônomo, Pix, check-in/check-out, avaliação e evolução.
 - **Fase 2 (entregue):** vitrine e painel de autoescolas, pacotes (autoescola e instrutor), fila "Novos alunos do app",
   saldo de aulas, chat, financeiro e saque do instrutor/autoescola, disputas, denúncias e painel admin completo.
-- **Fase 3:** rastreamento em tempo real, cupons, relatórios e cartão parcelado.
+- **Fase 3 (entregue):** instrutor a caminho com mapa ao vivo, link para contato de confiança, cupons (pagos pela
+  plataforma ou pelo parceiro), relatórios com exportação CSV e cartão de crédito parcelado.
 - **Fase 4:** integração com o CFC Plus.
