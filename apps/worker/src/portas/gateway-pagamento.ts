@@ -15,6 +15,16 @@ export type DadosCobrancaPix = {
   pagador: { nome: string; cpf: string | null; email: string; telefone: string };
 };
 
+/** Cartão: o aluno paga numa página do gateway (o app nunca vê dados do cartão). */
+export type DadosCobrancaCartao = Omit<DadosCobrancaPix, never> & { parcelas: number };
+
+export type CobrancaCartaoCriada = {
+  gatewayCobrancaId: string;
+  /** Página de pagamento; nulo no simulador (o app mostra "Simular pagamento"). */
+  urlPagamento: string | null;
+  dadosGateway?: unknown;
+};
+
 export type CobrancaCriada = {
   gatewayCobrancaId: string;
   pixCopiaCola: string;
@@ -37,11 +47,19 @@ export type InterpretacaoWebhook =
 export interface GatewayPagamentoPort {
   readonly nome: string;
   criarCobrancaPix(dados: DadosCobrancaPix): Promise<ResultadoExterno<CobrancaCriada>>;
-  cancelarCobranca(gatewayCobrancaId: string): Promise<ResultadoExterno<object>>;
+  criarCobrancaCartao(dados: DadosCobrancaCartao): Promise<ResultadoExterno<CobrancaCartaoCriada>>;
+  /** `parcelado`: a cobrança é um parcelamento no cartão (cancelado/estornado como um todo). */
+  cancelarCobranca(
+    gatewayCobrancaId: string,
+    opcoes?: { parcelado?: boolean },
+  ): Promise<ResultadoExterno<object>>;
   estornar(dados: {
     gatewayCobrancaId: string;
     valorCentavos: number;
     estornoId: string;
+    parcelado?: boolean;
+    /** Valor total da cobrança (para saber se o estorno é integral). */
+    valorCobrancaCentavos?: number;
   }): Promise<ResultadoExterno<{ gatewayEstornoId: string }>>;
   transferir(dados: {
     repasseId: string;

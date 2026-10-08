@@ -1,4 +1,5 @@
 import type {
+  DadosCobrancaCartao,
   DadosCobrancaPix,
   GatewayPagamentoPort,
   WebhookArmazenado,
@@ -21,6 +22,15 @@ export class GatewaySimulado implements GatewayPagamentoPort {
       pixQrCodeBase64: null,
       expiraEm: d.expiraEm,
       dadosGateway: { simulado: true },
+    };
+  }
+
+  async criarCobrancaCartao(d: DadosCobrancaCartao) {
+    return {
+      status: 'ok' as const,
+      gatewayCobrancaId: `sim_cart_${d.cobrancaId}`,
+      urlPagamento: null,
+      dadosGateway: { simulado: true, parcelas: d.parcelas },
     };
   }
 

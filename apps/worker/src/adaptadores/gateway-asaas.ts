@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import type {
+  DadosCobrancaCartao,
   DadosCobrancaPix,
   DadosPagamentoPix,
   GatewayPagamentoPort,
@@ -17,7 +18,7 @@ export type ConfigAsaas = {
 type Fetch = typeof fetch;
 
 /**
- * Adaptador Asaas (Pix). Sem API key configurada, comporta-se como "pendente_configuracao".
+ * Adaptador Asaas (Pix e cartão). Sem API key configurada, comporta-se como "pendente_configuracao".
  * Webhook: o Asaas envia o token configurado no cabeçalho "asaas-access-token".
  */
 export class GatewayAsaas implements GatewayPagamentoPort {
@@ -57,10 +58,10 @@ export class GatewayAsaas implements GatewayPagamentoPort {
     }
   }
 
-  async criarCobrancaPix(d: DadosCobrancaPix) {
+  private async cliente(d: DadosCobrancaPix) {
     if (!d.pagador.cpf)
       return { status: 'erro' as const, motivo: 'Pagador sem CPF', reprocessar: false };
-    const cliente = await this.chamar<{ id: string }>('POST', '/customers', {
+    return this.chamar<{ id: string }>('POST', '/customers', {
       name: d.pagador.nome,
       cpfCnpj: d.pagador.cpf,
       email: d.pagador.email,
@@ -68,6 +69,46 @@ export class GatewayAsaas implements GatewayPagamentoPort {
       externalReference: d.cobrancaId,
       notificationDisabled: true,
     });
+  }
+
+  /**
+   * Cartão: cria a cobrança (parcelada quando parcelas > 1) e devolve a página de pagamento
+   * do Asaas (invoiceUrl). Os dados do cartão são digitados lá, nunca passam por nós.
+   */
+  async criarCobrancaCartao(d: DadosCobrancaCartao) {
+    const cliente = await this.cliente(d);
+    if (cliente.status !== 'ok') return cliente;
+    const valor = d.valorCentavos / 100;
+    const pagamento = await this.chamar<{ id: string; invoiceUrl: string; installment?: string }>(
+      'POST',
+      '/payments',
+      {
+        customer: cliente.dados.id,
+        billingType: 'CREDIT_CARD',
+        dueDate: d.expiraEm.toISOString().slice(0, 10),
+        description: d.descricao,
+        externalReference: d.cobrancaId,
+        ...(d.parcelas > 1
+          ? { installmentCount: d.parcelas, totalValue: valor }
+          : { value: valor }),
+      },
+    );
+    if (pagamento.status !== 'ok') return pagamento;
+    return {
+      status: 'ok' as const,
+      // Parcelado: o Asaas cria uma cobrança por parcela; acompanhamos o parcelamento.
+      gatewayCobrancaId: pagamento.dados.installment ?? pagamento.dados.id,
+      urlPagamento: pagamento.dados.invoiceUrl,
+      dadosGateway: {
+        clienteId: cliente.dados.id,
+        pagamentoId: pagamento.dados.id,
+        parcelamentoId: pagamento.dados.installment ?? null,
+      },
+    };
+  }
+
+  async criarCobrancaPix(d: DadosCobrancaPix) {
+    const cliente = await this.cliente(d);
     if (cliente.status !== 'ok') return cliente;
     const pagamento = await this.chamar<{ id: string }>('POST', '/payments', {
       customer: cliente.dados.id,
@@ -93,12 +134,32 @@ export class GatewayAsaas implements GatewayPagamentoPort {
     };
   }
 
-  async cancelarCobranca(gatewayCobrancaId: string) {
-    const r = await this.chamar('DELETE', `/payments/${gatewayCobrancaId}`);
+  async cancelarCobranca(gatewayCobrancaId: string, opcoes: { parcelado?: boolean } = {}) {
+    const recurso = opcoes.parcelado ? 'installments' : 'payments';
+    const r = await this.chamar('DELETE', `/${recurso}/${gatewayCobrancaId}`);
     return r.status === 'ok' ? { status: 'ok' as const } : r;
   }
 
-  async estornar(d: { gatewayCobrancaId: string; valorCentavos: number }) {
+  async estornar(d: {
+    gatewayCobrancaId: string;
+    valorCentavos: number;
+    parcelado?: boolean;
+    valorCobrancaCentavos?: number;
+  }) {
+    if (d.parcelado) {
+      // O Asaas estorna parcelamentos inteiros; estorno parcial fica para o painel do Asaas.
+      if (d.valorCobrancaCentavos !== undefined && d.valorCentavos < d.valorCobrancaCentavos) {
+        return {
+          status: 'erro' as const,
+          motivo: 'Estorno parcial de compra parcelada: faça pelo painel do Asaas',
+          reprocessar: false,
+        };
+      }
+      const r = await this.chamar('POST', `/installments/${d.gatewayCobrancaId}/refund`);
+      return r.status === 'ok'
+        ? { status: 'ok' as const, gatewayEstornoId: `${d.gatewayCobrancaId}:refund` }
+        : r;
+    }
     const r = await this.chamar<{ id: string }>('POST', `/payments/${d.gatewayCobrancaId}/refund`, {
       value: d.valorCentavos / 100,
     });
@@ -149,9 +210,13 @@ export class GatewayAsaas implements GatewayPagamentoPort {
       timingSafeEqual(Buffer.from(recebido), Buffer.from(esperado));
     if (!valido) return { tipo: 'invalido' as const, motivo: 'Token do webhook inválido' };
     const evento = String(w.payload.event ?? '');
-    const pagamento = w.payload.payment as { id?: string } | undefined;
+    const pagamento = w.payload.payment as { id?: string; installment?: string } | undefined;
     if (['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'].includes(evento) && pagamento?.id) {
-      return { tipo: 'pagamento_confirmado' as const, gatewayCobrancaId: pagamento.id };
+      // Parcela de cartão: o pagamento confirma o parcelamento inteiro (idempotente).
+      return {
+        tipo: 'pagamento_confirmado' as const,
+        gatewayCobrancaId: pagamento.installment ?? pagamento.id,
+      };
     }
     return { tipo: 'ignorado' as const, motivo: `evento ${evento}` };
   }

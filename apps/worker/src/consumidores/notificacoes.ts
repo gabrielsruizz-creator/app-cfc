@@ -121,6 +121,14 @@ async function montarAvisos(db: Db, evento: Evento): Promise<Aviso[]> {
     case 'aula.remarcada':
       add(instrutor, 'Aula remarcada', `Um aluno remarcou a aula para ${em}. Confirme no app.`);
       break;
+    case 'aula.a_caminho':
+      add(
+        aluno,
+        'Seu instrutor está a caminho 🚗',
+        `Acompanhe no mapa a chegada para a aula de ${em}.`,
+        { tela: 'aula', aulaId: p.aulaId },
+      );
+      break;
     case 'aula.checkin':
       add(aluno, 'Aula iniciada', 'Boa aula! Dirija com atenção.');
       break;
@@ -410,6 +418,7 @@ export const EVENTOS_COM_AVISO: TipoEvento[] = [
   'aula.expirada',
   'aula.cancelada',
   'aula.remarcada',
+  'aula.a_caminho',
   'aula.checkin',
   'aula.checkout',
   'aula.concluida',

@@ -52,6 +52,7 @@ function gatewayRecusaPix(): GatewayPagamentoPort {
   return {
     nome: 'recusa_pix',
     criarCobrancaPix: (d) => base.criarCobrancaPix(d),
+    criarCobrancaCartao: (d) => base.criarCobrancaCartao(d),
     cancelarCobranca: () => base.cancelarCobranca(),
     estornar: (d) => base.estornar(d),
     transferir: (d) => base.transferir(d),

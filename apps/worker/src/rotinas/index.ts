@@ -25,6 +25,7 @@ import {
   encerrarComEstornoTotal,
   expirarAulaNaoPaga,
   expirarCredito,
+  expurgarPosicoes,
   expirarPedidoAutoescola,
   lembrarAutoescola,
 } from '@volante/dominio';
@@ -261,8 +262,16 @@ export async function expirarCreditosVencidos(deps: Dependencias, agora = new Da
   return expirados;
 }
 
+/** Posições do instrutor são apagadas depois de 30 dias (só servem durante a aula). */
+export async function expurgarPosicoesAntigas(deps: Dependencias, agora = new Date()) {
+  return comAtor(deps.db, ATOR_SISTEMA, (tx) =>
+    expurgarPosicoes(tx, new Date(agora.getTime() - 30 * 86400_000)),
+  );
+}
+
 export async function executarRotinas(deps: Dependencias, agora = new Date()) {
   return {
+    posicoesExpurgadas: await expurgarPosicoesAntigas(deps, agora),
     pedidosAutoescola: await acompanharPedidosAutoescola(deps, agora),
     creditosExpirados: await expirarCreditosVencidos(deps, agora),
     pixExpirados: await expirarPixNaoPagos(deps, agora),

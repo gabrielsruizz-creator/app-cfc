@@ -171,7 +171,11 @@ export class ComercialService {
 
   // ---------- Aluno: pedidos e saldo ----------
 
-  async comprar(ator: Ator & { alunoId: string }, pacoteId: string, chave: string) {
+  async comprar(
+    ator: Ator & { alunoId: string },
+    d: { pacoteId: string; cupom?: string; metodo: 'pix' | 'cartao'; parcelas: number },
+    chave: string,
+  ) {
     const chaveIdempotencia = `${ator.alunoId}:${chave}`;
     const pedidoId = await this.banco.comAtor(ator, async (tx) => {
       const [existente] = await tx
@@ -181,7 +185,10 @@ export class ComercialService {
       if (existente) return existente.pedidoId;
       const r = await comprarPacote(tx, {
         alunoId: ator.alunoId,
-        pacoteId,
+        pacoteId: d.pacoteId,
+        cupom: d.cupom || null,
+        metodo: d.metodo,
+        parcelas: d.parcelas,
         gateway: this.config.PAGAMENTO_GATEWAY,
         chaveIdempotencia,
       });

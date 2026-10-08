@@ -1,6 +1,17 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { adminsPlataforma, criarBancoTeste, semearBase, type BancoTeste } from '@volante/db';
+import {
+  adminsPlataforma,
+  ATOR_SISTEMA,
+  autoescolas,
+  cobrancas,
+  comAtor,
+  criarBancoTeste,
+  eq,
+  semearBase,
+  type BancoTeste,
+} from '@volante/db';
+import { confirmarPagamento } from '@volante/dominio';
 import { expect } from 'vitest';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -206,4 +217,63 @@ export async function alunoCompleto(ctx: Contexto) {
     .send({ categoriaDesejada: 'B', selfieArquivoId: selfie })
     .expect(201);
   return { ...u, alunoId: r.body.id as string };
+}
+
+/** Simula o webhook do gateway (o worker faria isso). */
+export async function pagar(ctx: Contexto, cobrancaId: string) {
+  await comAtor(ctx.banco.db, ATOR_SISTEMA, async (tx) => {
+    await tx
+      .update(cobrancas)
+      .set({ gatewayCobrancaId: `sim_${cobrancaId}` })
+      .where(eq(cobrancas.id, cobrancaId));
+    await confirmarPagamento(tx, cobrancaId);
+  });
+}
+
+let cnpjSeq = 0;
+function cnpjValido() {
+  cnpjSeq++;
+  const base = `${String(Date.now()).slice(-8)}000${cnpjSeq}`.slice(-12).split('').map(Number);
+  const dv = (nums: number[]) => {
+    const pesos =
+      nums.length === 12
+        ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const r = nums.reduce((acc, n, i) => acc + n * pesos[i]!, 0) % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  const d1 = dv(base);
+  return [...base, d1, dv([...base, d1])].join('');
+}
+
+export async function autoescolaAprovada(ctx: Contexto, nome: string) {
+  const dono = await cadastrar(ctx, 'Dono');
+  const r = await ctx
+    .http()
+    .post('/autoescolas')
+    .set(auth(dono.token))
+    .send({
+      razaoSocial: `${nome} LTDA`,
+      nomeFantasia: nome,
+      cnpj: cnpjValido(),
+      credenciamentoDetran: 'CFC-123',
+      telefone: '11999990000',
+      whatsapp: '11999990000',
+      email: 'contato@exemplo.com',
+      cep: '01310-100',
+      logradouro: 'Av. Paulista',
+      numero: '100',
+      bairro: 'Bela Vista',
+      municipio: 'São Paulo',
+      uf: 'SP',
+      localizacao: BASE,
+      aceitouTermoAutoescola: true,
+    })
+    .expect(201);
+  const autoescolaId = r.body.autoescola.id as string;
+  await comAtor(ctx.banco.db, ATOR_SISTEMA, (tx) =>
+    tx.update(autoescolas).set({ status: 'aprovada' }).where(eq(autoescolas.id, autoescolaId)),
+  );
+  const h = { ...auth(dono.token), 'x-autoescola-id': autoescolaId };
+  return { ...dono, autoescolaId, h };
 }

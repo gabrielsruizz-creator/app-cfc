@@ -83,6 +83,7 @@ export class AulasService {
         pontoEncontroReferencia: dados.pontoEncontroReferencia,
         gateway: this.config.PAGAMENTO_GATEWAY,
         chaveIdempotencia: chave,
+        cupom: dados.cupom || null,
       });
       return r.aula.id;
     });

@@ -13,6 +13,10 @@ const esquema = z.object({
   CORS_ORIGENS: z.string().default('*'),
   /** Pasta do painel web compilado (apps/web/dist) para servir em /painel. */
   PAINEL_DIR: z.string().optional(),
+  /** Endereço público do painel web, usado no link de acompanhamento da aula. */
+  URL_PAINEL: z.string().optional(),
+  /** Definida pelo Render (ex.: https://volante-api.onrender.com). */
+  RENDER_EXTERNAL_URL: z.string().optional(),
 });
 
 export type Config = z.infer<typeof esquema>;
@@ -31,3 +35,11 @@ export function lerConfig(env: NodeJS.ProcessEnv = process.env): Config {
 }
 
 export const CONFIG = Symbol('CONFIG');
+
+/** Base pública do painel: URL_PAINEL, ou o próprio serviço no Render (/painel), ou o Vite local. */
+export function urlPainel(c: Config): string {
+  const base =
+    c.URL_PAINEL ??
+    (c.RENDER_EXTERNAL_URL ? `${c.RENDER_EXTERNAL_URL}/painel` : 'http://localhost:5173');
+  return base.replace(/\/$/, '');
+}

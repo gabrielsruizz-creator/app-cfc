@@ -13,6 +13,7 @@ import {
   agendarComCredito,
   avaliarAutoescola,
   comprarPacote,
+  type ComprarPacote,
   pacoteEntrada,
   type AgendarComCredito,
   type PacoteEntrada,
@@ -121,10 +122,10 @@ export class ComercialController {
   @Post('aluno/pedidos')
   comprar(
     @SessaoAtual() s: Sessao,
-    @Body(new ZodPipe(comprarPacote)) d: { pacoteId: string },
+    @Body(new ZodPipe(comprarPacote)) d: ComprarPacote,
     @Headers('idempotency-key') chave?: string,
   ) {
-    return this.servico.comprar(atorAluno(s), d.pacoteId, exigirChave(chave));
+    return this.servico.comprar(atorAluno(s), d, exigirChave(chave));
   }
 
   @Get('aluno/pedidos')

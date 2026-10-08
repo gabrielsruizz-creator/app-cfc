@@ -27,7 +27,7 @@ function gatewayDe(deps: Dependencias, nome: string): GatewayPagamentoPort {
 
 class ErroReprocessavel extends Error {}
 
-/** Cria a cobrança Pix no gateway e grava o "copia e cola" para o app exibir. */
+/** Cria a cobrança no gateway: Pix (grava o "copia e cola") ou cartão (grava a página de pagamento). */
 export const criarCobrancaNoGateway: Consumidor = {
   nome: 'gateway.criar_cobranca',
   eventos: ['cobranca.solicitada'],
@@ -44,7 +44,7 @@ export const criarCobrancaNoGateway: Consumidor = {
         .for('update', { of: cobrancas });
       if (!linha || linha.cobranca.status !== 'pendente_envio') return;
       const { cobranca, pedido, usuario } = linha;
-      const r = await gatewayDe(deps, cobranca.gateway).criarCobrancaPix({
+      const dados = {
         cobrancaId: cobranca.id,
         valorCentavos: cobranca.valorCentavos,
         expiraEm: cobranca.pixExpiraEm ?? new Date(Date.now() + 30 * 60_000),
@@ -55,15 +55,21 @@ export const criarCobrancaNoGateway: Consumidor = {
           email: usuario.email,
           telefone: usuario.telefone,
         },
-      });
+      };
+      const gateway = gatewayDe(deps, cobranca.gateway);
+      const r =
+        cobranca.metodo === 'cartao'
+          ? await gateway.criarCobrancaCartao({ ...dados, parcelas: cobranca.parcelas })
+          : await gateway.criarCobrancaPix(dados);
       if (r.status === 'ok') {
         await tx
           .update(cobrancas)
           .set({
             status: 'aguardando_pagamento',
             gatewayCobrancaId: r.gatewayCobrancaId,
-            pixCopiaCola: r.pixCopiaCola,
-            pixQrcodeBase64: r.pixQrCodeBase64,
+            ...('urlPagamento' in r
+              ? { urlPagamento: r.urlPagamento }
+              : { pixCopiaCola: r.pixCopiaCola, pixQrcodeBase64: r.pixQrCodeBase64 }),
             dadosGateway: (r.dadosGateway ?? null) as never,
             ultimoErro: null,
           })
@@ -162,6 +168,8 @@ export const executarEstorno: Consumidor = {
         gatewayCobrancaId: cobranca.gatewayCobrancaId,
         valorCentavos: estorno.valorCentavos,
         estornoId: estorno.id,
+        parcelado: cobranca.metodo === 'cartao' && cobranca.parcelas > 1,
+        valorCobrancaCentavos: cobranca.valorCentavos,
       });
       if (r.status === 'ok') {
         await tx
@@ -302,7 +310,9 @@ export const cancelarCobrancaExpirada: Consumidor = {
       tx.select().from(cobrancas).where(eq(cobrancas.id, cobrancaId)),
     );
     if (!c?.gatewayCobrancaId) return;
-    const r = await gatewayDe(deps, c.gateway).cancelarCobranca(c.gatewayCobrancaId);
+    const r = await gatewayDe(deps, c.gateway).cancelarCobranca(c.gatewayCobrancaId, {
+      parcelado: c.metodo === 'cartao' && c.parcelas > 1,
+    });
     if (r.status === 'erro' && r.reprocessar) throw new ErroReprocessavel(r.motivo);
   },
 };

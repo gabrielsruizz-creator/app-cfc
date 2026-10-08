@@ -7,6 +7,9 @@ import { ChatModule } from './modulos/chat/chat.module';
 import { ComercialModule } from './modulos/comercial/comercial.module';
 import { FinanceiroModule } from './modulos/financeiro/financeiro.module';
 import { ModeracaoModule } from './modulos/moderacao/moderacao.module';
+import { PromocoesModule } from './modulos/promocoes/promocoes.module';
+import { RastreamentoModule } from './modulos/rastreamento/rastreamento.module';
+import { RelatoriosModule } from './modulos/relatorios/relatorios.module';
 import { AulasModule } from './modulos/aulas/aulas.module';
 import { AutoescolasModule } from './modulos/autoescolas/autoescolas.module';
 import { IdentidadeModule } from './modulos/identidade/identidade.module';
@@ -39,6 +42,9 @@ import { SaudeController } from './saude.controller';
     FinanceiroModule,
     ChatModule,
     ModeracaoModule,
+    PromocoesModule,
+    RastreamentoModule,
+    RelatoriosModule,
   ],
   controllers: [SaudeController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -15,6 +15,9 @@ export class GatewayNaoConfigurado implements GatewayPagamentoPort {
   criarCobrancaPix() {
     return this.pendente<never>();
   }
+  criarCobrancaCartao() {
+    return this.pendente<never>();
+  }
   cancelarCobranca() {
     return this.pendente<object>();
   }

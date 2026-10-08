@@ -1,15 +1,16 @@
-import { ATOR_SISTEMA, aulas, autoescolas, cobrancas, comAtor, eq } from '@volante/db';
-import { confirmarPagamento } from '@volante/dominio';
+import { ATOR_SISTEMA, aulas, comAtor, eq } from '@volante/db';
 import { DateTime } from 'luxon';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   alunoCompleto,
+  autoescolaAprovada,
   auth,
   BASE,
   cadastrar,
   criarAdmin,
   iniciarApp,
   instrutorAprovado,
+  pagar,
   type Contexto,
 } from './apoio';
 
@@ -31,65 +32,6 @@ function horario(dias: number, hora: number) {
     .toISO()!;
 }
 
-/** Simula o webhook do gateway (o worker faria isso). */
-async function pagar(cobrancaId: string) {
-  await comAtor(ctx.banco.db, ATOR_SISTEMA, async (tx) => {
-    await tx
-      .update(cobrancas)
-      .set({ gatewayCobrancaId: `sim_${cobrancaId}` })
-      .where(eq(cobrancas.id, cobrancaId));
-    await confirmarPagamento(tx, cobrancaId);
-  });
-}
-
-let cnpjSeq = 0;
-function cnpjValido() {
-  cnpjSeq++;
-  const base = `${String(Date.now()).slice(-8)}000${cnpjSeq}`.slice(-12).split('').map(Number);
-  const dv = (nums: number[]) => {
-    const pesos =
-      nums.length === 12
-        ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-        : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    const r = nums.reduce((acc, n, i) => acc + n * pesos[i]!, 0) % 11;
-    return r < 2 ? 0 : 11 - r;
-  };
-  const d1 = dv(base);
-  return [...base, d1, dv([...base, d1])].join('');
-}
-
-async function autoescolaAprovada(nome: string) {
-  const dono = await cadastrar(ctx, 'Dono');
-  const r = await ctx
-    .http()
-    .post('/autoescolas')
-    .set(auth(dono.token))
-    .send({
-      razaoSocial: `${nome} LTDA`,
-      nomeFantasia: nome,
-      cnpj: cnpjValido(),
-      credenciamentoDetran: 'CFC-123',
-      telefone: '11999990000',
-      whatsapp: '11999990000',
-      email: 'contato@exemplo.com',
-      cep: '01310-100',
-      logradouro: 'Av. Paulista',
-      numero: '100',
-      bairro: 'Bela Vista',
-      municipio: 'São Paulo',
-      uf: 'SP',
-      localizacao: BASE,
-      aceitouTermoAutoescola: true,
-    })
-    .expect(201);
-  const autoescolaId = r.body.autoescola.id as string;
-  await comAtor(ctx.banco.db, ATOR_SISTEMA, (tx) =>
-    tx.update(autoescolas).set({ status: 'aprovada' }).where(eq(autoescolas.id, autoescolaId)),
-  );
-  const h = { ...auth(dono.token), 'x-autoescola-id': autoescolaId };
-  return { ...dono, autoescolaId, h };
-}
-
 const PACOTE = {
   nome: 'Pacote 10 aulas',
   descricao: 'Ideal para quem está começando',
@@ -109,7 +51,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
   beforeAll(async () => {
     admin = await criarAdmin(ctx);
     instrutor = await instrutorAprovado(ctx, admin.token);
-    cfc = await autoescolaAprovada('Autoescola Fila');
+    cfc = await autoescolaAprovada(ctx, 'Autoescola Fila');
   });
 
   it('vitrine, pacote, convite de instrutor e busca pública', async () => {
@@ -187,7 +129,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
       fila.body.find((i: { pedidoId: string }) => i.pedidoId === pedido.body.id),
     ).toBeUndefined();
 
-    await pagar(pedido.body.cobranca.id);
+    await pagar(ctx, pedido.body.cobranca.id);
     const pago = await ctx.http().get(`/aluno/pedidos/${pedido.body.id}`).set(ha).expect(200);
     expect(pago.body.status).toBe('pago');
     expect(pago.body.statusAtendimento).toBe('novo');
@@ -200,7 +142,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
     expect(item.valorLiquidoCentavos).toBeLessThan(100000);
 
     // outra autoescola não vê o pedido
-    const outra = await autoescolaAprovada('Outra Autoescola');
+    const outra = await autoescolaAprovada(ctx, 'Outra Autoescola');
     const filaOutra = await ctx.http().get('/autoescola/fila').set(outra.h).expect(200);
     expect(filaOutra.body).toHaveLength(0);
     await ctx.http().post(`/autoescola/fila/${pedido.body.id}/confirmar`).set(outra.h).expect(404);
@@ -265,7 +207,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
       .set('idempotency-key', 'pedido-recusa')
       .send({ pacoteId: perfil.body.pacotes[0].id })
       .expect(201);
-    await pagar(pedido.body.cobranca.id);
+    await pagar(ctx, pedido.body.cobranca.id);
     await ctx
       .http()
       .post(`/autoescola/fila/${pedido.body.id}/recusar`)
@@ -380,7 +322,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
       .set('idempotency-key', 'pedido-instrutor')
       .send({ pacoteId })
       .expect(201);
-    await pagar(pedido.body.cobranca.id);
+    await pagar(ctx, pedido.body.cobranca.id);
     const creditos = await ctx.http().get('/aluno/creditos').set(ha).expect(200);
     const aula = await ctx
       .http()
