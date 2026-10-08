@@ -44,6 +44,9 @@ services:
           property: connectionString
       - key: JWT_SEGREDO
         generateValue: true
+      # Cifra as chaves Pix dos saques no banco (não troque depois de cadastrar chaves).
+      - key: CHAVE_CIFRAGEM
+        generateValue: true
       - key: ADMIN_EMAIL
         value: admin@volante.dev
       # Senha do admin gerada automaticamente: veja em volante-api > Environment.

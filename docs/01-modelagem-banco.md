@@ -1,6 +1,6 @@
 # Modelagem do banco de dados — v0.1 (para aprovação)
 
-> Status: **aprovada e implementada na Fase 1** (veja "Ajustes feitos na implementação" abaixo). Cada tabela está marcada com a fase em que entra: **[F1]**, **[F2]**, **[F3]**, **[F4]**.
+> Status: **aprovada e implementada nas Fases 1 e 2** (veja "Ajustes feitos na implementação" abaixo). Cada tabela está marcada com a fase em que entra: **[F1]**, **[F2]**, **[F3]**, **[F4]**.
 > Tabelas de fases futuras aparecem aqui para que a Fase 1 já nasça compatível com elas (sem migrações destrutivas depois).
 
 ## Ajustes feitos na implementação (Fase 1)
@@ -15,6 +15,19 @@
 | Arquivos           | Upload passa pela API (armazenamento é infraestrutura, como o banco): disco local no desenvolvimento, bucket S3 privado em produção.                                                                                                                                                                                                                           |
 | Gateway            | Além de `nao_configurado` e `asaas`, existe `simulado` para testes (bloqueado em produção).                                                                                                                                                                                                                                                                    |
 | Agenda             | Horários livres = jornada semanal dividida em aulas de 50 min + 10 min de intervalo, menos aulas, folgas e antecedência mínima.                                                                                                                                                                                                                                |
+
+## Ajustes feitos na implementação (Fase 2)
+
+| Tema                 | Como ficou                                                                                                                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pacote de autoescola | O valor fica **retido** até a autoescola confirmar a matrícula; aí é liberado de uma vez (menos a comissão) e o saldo de aulas é desbloqueado. Recusa ou falta de resposta no prazo (`pedido.expiracao_dias`) devolvem tudo ao aluno.         |
+| Pacote de instrutor  | O saldo é liberado na hora; o valor é repassado **a cada aula concluída** (proporcional, sem sobras de arredondamento na última). Aulas não usadas dentro da validade expiram e o valor retido vai ao instrutor.                              |
+| Pacote não pago      | O aluno pode desistir antes de pagar; o Pix vencido cancela o pedido. Pagamento que chega depois é devolvido automaticamente.                                                                                                                 |
+| Equipe da autoescola | Nova tabela `instrutor_vinculos` (convidado → ativo → encerrado). O saldo de um pacote de autoescola só pode ser usado com instrutores com vínculo ativo.                                                                                     |
+| Vitrine              | Novas tabelas `autoescola_horarios` e `autoescola_fotos` (até 12), com leitura pública; `mensagem_whatsapp_padrao` aceita `{aluno}`, `{autoescola}` e `{pacote}`.                                                                             |
+| Saques               | `contas_recebimento` guarda a chave Pix **cifrada** (AES-256-GCM, `CHAVE_CIFRAGEM`) e mascarada; `saques` debita o disponível na hora e o worker envia o Pix (falha definitiva devolve o valor; sem gateway fica "pendente de configuração"). |
+| Chat                 | `conversas` + `mensagens` com RLS por participante; o app alerta (sem bloquear) quando a mensagem parece conter telefone.                                                                                                                     |
+| Disputas e denúncias | `disputas` (por aula: estorno total, parcial ou negada, com auditoria) e `denuncias` (sigilosas). Aula com disputa aberta não é confirmada automaticamente.                                                                                   |
 
 ---
 

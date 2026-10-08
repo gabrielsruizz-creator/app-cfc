@@ -17,11 +17,14 @@ import {
   adminsPlataforma,
   alunos,
   arquivos,
+  autoescolaHorarios,
   autoescolaMembros,
   autoescolas,
   disponibilidadesSemanais,
   instrutorDocumentos,
+  instrutorVinculos,
   instrutores,
+  pacotes,
   usuarios,
   veiculos,
 } from '../schema';
@@ -286,6 +289,7 @@ async function semearDemo(db: Db) {
       '24843803483',
       '+5511933330000',
     );
+    let autoescolaId: string;
     if (autoNova) {
       const [a] = await tx
         .insert(autoescolas)
@@ -319,6 +323,94 @@ async function semearDemo(db: Db) {
         await tx
           .insert(autoescolaMembros)
           .values({ autoescolaId: a!.id, usuarioId: uAuto.id, papel: 'dono' });
+      autoescolaId = a!.id;
+    } else {
+      // Também acompanha DEMO_LAT/DEMO_LNG, para aparecer na aba "Autoescolas" da sua região.
+      const [m] = await tx
+        .select({ id: autoescolaMembros.autoescolaId })
+        .from(autoescolaMembros)
+        .where(eq(autoescolaMembros.usuarioId, uAuto.id));
+      autoescolaId = m!.id;
+      await tx
+        .update(autoescolas)
+        .set({ localizacao: centro })
+        .where(eq(autoescolas.id, autoescolaId));
+    }
+
+    // Fase 2: vitrine, pacotes e equipe (só na primeira vez)
+    const [jaTemPacote] = await tx
+      .select({ id: pacotes.id })
+      .from(pacotes)
+      .where(eq(pacotes.autoescolaId, autoescolaId));
+    if (!jaTemPacote) {
+      await tx
+        .update(autoescolas)
+        .set({
+          descricao:
+            'Autoescola de demonstração: estrutura completa, carros novos e instrutores pacientes. Primeira habilitação, reciclagem e aulas para habilitados.',
+          mensagemWhatsappPadrao:
+            'Olá, {aluno}! Aqui é da {autoescola}. Recebemos sua compra do {pacote} pelo app e vamos combinar sua matrícula.',
+        })
+        .where(eq(autoescolas.id, autoescolaId));
+      for (let dia = 1; dia <= 6; dia++) {
+        await tx.insert(autoescolaHorarios).values({
+          autoescolaId,
+          diaSemana: dia,
+          abre: '08:00',
+          fecha: dia === 6 ? '12:00' : '18:00',
+        });
+      }
+      await tx.insert(pacotes).values([
+        {
+          vendedorTipo: 'autoescola',
+          autoescolaId,
+          nome: 'Primeira habilitação B — 20 aulas',
+          descricao: '20 aulas práticas de 50 minutos com os instrutores da autoescola.',
+          categorias: ['B'],
+          quantidadeAulas: 20,
+          duracaoAulaMin: 50,
+          precoCentavos: 180000,
+          validadeDias: 180,
+          publicado: true,
+        },
+        {
+          vendedorTipo: 'autoescola',
+          autoescolaId,
+          nome: 'Reciclagem — 5 aulas',
+          descricao: 'Para quem já tem CNH e quer voltar a dirigir com segurança.',
+          categorias: ['B'],
+          quantidadeAulas: 5,
+          duracaoAulaMin: 50,
+          precoCentavos: 47500,
+          validadeDias: 90,
+          publicado: true,
+        },
+      ]);
+      const [instrutorDemo] = await tx
+        .select({ id: instrutores.id, preco: instrutores.precoAulaCentavos })
+        .from(instrutores)
+        .innerJoin(usuarios, eq(usuarios.id, instrutores.usuarioId))
+        .where(eq(usuarios.email, 'instrutor@demo.com'));
+      if (instrutorDemo) {
+        await tx.insert(pacotes).values({
+          vendedorTipo: 'instrutor',
+          instrutorId: instrutorDemo.id,
+          nome: '5 aulas com desconto',
+          categorias: ['B'],
+          quantidadeAulas: 5,
+          duracaoAulaMin: 50,
+          precoCentavos: Math.round((instrutorDemo.preco ?? 9000) * 5 * 0.9),
+          validadeDias: 120,
+          publicado: true,
+        });
+        await tx.insert(instrutorVinculos).values({
+          instrutorId: instrutorDemo.id,
+          autoescolaId,
+          status: 'ativo',
+          convidadoPor: uAuto.id,
+          inicioEm: new Date(),
+        });
+      }
     }
   });
   console.log(

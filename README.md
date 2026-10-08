@@ -74,15 +74,35 @@ O app encontra a API sozinho pelo IP do computador (porta 3000). Se não conecta
 
 ### Contas de demonstração (senha `demo1234`)
 
-| Conta                              | Para quê                                                                             |
-| ---------------------------------- | ------------------------------------------------------------------------------------ |
-| `aluno@demo.com`                   | Buscar instrutores, agendar, pagar (Pix simulado), acompanhar a aula                 |
-| `instrutor@demo.com`               | Aceitar a aula, fazer check-in com o código do aluno, check-out e registrar evolução |
-| `autoescola@demo.com`              | Painel web da autoescola                                                             |
-| `admin@volante.dev` / `admin12345` | Painel web de administração                                                          |
+| Conta                              | Para quê                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `aluno@demo.com`                   | Buscar instrutores e autoescolas, agendar, comprar pacotes (Pix simulado), conversar                   |
+| `instrutor@demo.com`               | Aceitar aulas, check-in/out, evolução, pacotes, ganhos e saque; faz parte da equipe da Autoescola Demo |
+| `autoescola@demo.com`              | Painel web da autoescola (fila de novos alunos, pacotes, vitrine, financeiro)                          |
+| `admin@volante.dev` / `admin12345` | Painel web de administração                                                                            |
 
-Os instrutores de demonstração ficam perto da Av. Paulista (São Paulo). Para criá-los em outra cidade:
-coloque `DEMO_LAT=-22.9068` e `DEMO_LNG=-43.1729` (exemplo: Rio de Janeiro) no `.env` antes do `pnpm db:semear -- --demo`.
+Os instrutores e a autoescola de demonstração ficam perto da Av. Paulista (São Paulo). Para levá-los para outra cidade:
+coloque `DEMO_LAT=-22.9068` e `DEMO_LNG=-43.1729` (exemplo: Rio de Janeiro) no `.env` antes do `pnpm db:semear -- --demo`
+(rodar de novo move os que já existem).
+
+### Roteiro de teste da Fase 2
+
+1. **App, como aluno:** aba **Autoescolas** → Autoescola Demo → **Comprar com Pix** um pacote → **Simular pagamento**.
+   O pedido fica "Aguardando contato da autoescola" (Perfil › Meus pacotes).
+2. **Painel web, como autoescola** (`autoescola@demo.com`): **Novos alunos do app** mostra o pedido com o tempo de espera
+   (verde até 24 h, amarelo até 48 h, vermelho depois), o botão **Chamar no WhatsApp** e as ações
+   _Em contato_, _Confirmar matrícula_ e _Recusar_ (com motivo; o aluno é reembolsado).
+3. Depois de confirmar: no app, **Perfil › Saldo de aulas** → Agendar → escolha o instrutor da equipe. A aula entra
+   sem novo pagamento; o instrutor aceita como de costume.
+4. **Pacote de instrutor:** no perfil do instrutor demo há "5 aulas com desconto"; o valor é liberado a cada aula realizada
+   (veja em **Painel › Ganhos e saques** no modo instrutor, onde também se cadastra a chave Pix e se pede o saque).
+5. **Conversas:** "Tirar dúvidas pelo chat" no perfil da autoescola; ela responde em **Conversas** no painel.
+6. **Problema numa aula:** depois do check-out, "Relatar problema nesta aula" abre uma disputa; o admin decide em
+   **Disputas** (negar, estorno parcial ou total). Enquanto isso a aula não é confirmada automaticamente.
+7. **Admin:** Início com indicadores do mês e gráfico de aulas por dia, **Usuários** (bloquear/desbloquear),
+   **Denúncias** e **Disputas**.
+
+Prazos da fila (lembrete em 48 h e expiração em 5 dias) e demais regras ficam em **Admin › Configurações**.
 
 ### Pagamento em modo de teste
 
@@ -110,12 +130,15 @@ pnpm test        # usa um Postgres real (TEST_DATABASE_URL; padrão: postgres://
 Cobrem: isolamento entre autoescolas (RLS), agenda sem conflito mesmo com reservas simultâneas,
 fluxo do dinheiro (retenção, liberação com comissão, estornos, multa), auditoria imutável,
 worker (Pix simulado, gateway não configurado, novas tentativas, prazos, documentos vencidos),
-adaptador Asaas e o fluxo completo da Fase 1 pela API.
+adaptador Asaas, os fluxos completos das Fases 1 e 2 pela API (fila da autoescola, pacotes, saldo de aulas,
+chat, financeiro, disputas, moderação) e as rotinas do worker (lembrete/expiração de pedidos, validade de pacotes,
+saque via Pix com devolução em caso de falha).
 
 ## Fases
 
-- **Fase 1 (esta entrega):** monorepo, cadastro/login dos perfis, aprovação de instrutor e autoescola, busca no mapa,
+- **Fase 1 (entregue):** monorepo, cadastro/login dos perfis, aprovação de instrutor e autoescola, busca no mapa,
   agendamento com instrutor autônomo, Pix, check-in/check-out, avaliação e evolução.
-- **Fase 2:** vitrine e painel de autoescolas, pacotes, fila "Novos alunos do app", chat, financeiro do instrutor e painel admin completo.
+- **Fase 2 (entregue):** vitrine e painel de autoescolas, pacotes (autoescola e instrutor), fila "Novos alunos do app",
+  saldo de aulas, chat, financeiro e saque do instrutor/autoescola, disputas, denúncias e painel admin completo.
 - **Fase 3:** rastreamento em tempo real, cupons, relatórios e cartão parcelado.
 - **Fase 4:** integração com o CFC Plus.
