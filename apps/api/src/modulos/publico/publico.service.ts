@@ -77,7 +77,9 @@ export class PublicoService {
     const filtrosVeiculo = [];
     if (f.cambio) filtrosVeiculo.push(sql`bool_or(v.cambio = ${f.cambio})`);
     if (f.adaptadoPcd) filtrosVeiculo.push(sql`bool_or(v.adaptado_pcd)`);
-    const having = filtrosVeiculo.length ? sql`having ${sql.join(filtrosVeiculo, sql` and `)}` : sql``;
+    const having = filtrosVeiculo.length
+      ? sql`having ${sql.join(filtrosVeiculo, sql` and `)}`
+      : sql``;
 
     const ordem =
       f.ordenar === 'preco'
@@ -150,7 +152,10 @@ export class PublicoService {
       notaMedia: i.notaMedia,
       totalAvaliacoes: i.totalAvaliacoes,
       anosExperiencia: i.atuaDesde ? new Date().getFullYear() - i.atuaDesde : null,
-      posicaoAproximada: { lat: Number(aproximada.rows[0]?.lat ?? 0), lng: Number(aproximada.rows[0]?.lng ?? 0) },
+      posicaoAproximada: {
+        lat: Number(aproximada.rows[0]?.lat ?? 0),
+        lng: Number(aproximada.rows[0]?.lng ?? 0),
+      },
       forneceVeiculo: i.forneceVeiculo,
       cambios: [...new Set(vs.map((v) => v.cambio))] as PerfilInstrutorPublico['cambios'],
       adaptadoPcd: vs.some((v) => v.adaptadoPcd),
@@ -230,17 +235,30 @@ export class PublicoService {
     const bloqueios = await db
       .select()
       .from(bloqueiosAgenda)
-      .where(and(eq(bloqueiosAgenda.instrutorId, instrutor.id), lt(bloqueiosAgenda.inicio, ate), gte(bloqueiosAgenda.fim, de)));
+      .where(
+        and(
+          eq(bloqueiosAgenda.instrutorId, instrutor.id),
+          lt(bloqueiosAgenda.inicio, ate),
+          gte(bloqueiosAgenda.fim, de),
+        ),
+      );
 
     const parametros = {
       fusoHorario: instrutor.fusoHorario,
-      faixas: faixas.map((f) => ({ diaSemana: f.diaSemana, horaInicio: f.horaInicio, horaFim: f.horaFim })),
+      faixas: faixas.map((f) => ({
+        diaSemana: f.diaSemana,
+        horaInicio: f.horaInicio,
+        horaFim: f.horaFim,
+      })),
       duracaoMin: instrutor.duracaoAulaMin,
       intervaloMin: cfg['aula.intervalo_entre_aulas_min'],
       ocupados: ocupados.rows.map((o) => ({ inicio: new Date(o.inicio), fim: new Date(o.fim) })),
       bloqueios: bloqueios.map((b) => ({ inicio: b.inicio, fim: b.fim })),
       agora,
-      antecedenciaMinimaH: Math.max(instrutor.antecedenciaMinimaH ?? 0, cfg['aula.antecedencia_minima_agendamento_h']),
+      antecedenciaMinimaH: Math.max(
+        instrutor.antecedenciaMinimaH ?? 0,
+        cfg['aula.antecedencia_minima_agendamento_h'],
+      ),
     };
     return {
       dias: datas.map((data) => ({
@@ -276,7 +294,12 @@ export class PublicoService {
 
   async habilidades() {
     return this.banco.db
-      .select({ id: habilidades.id, codigo: habilidades.codigo, nome: habilidades.nome, categorias: habilidades.categorias })
+      .select({
+        id: habilidades.id,
+        codigo: habilidades.codigo,
+        nome: habilidades.nome,
+        categorias: habilidades.categorias,
+      })
       .from(habilidades)
       .where(eq(habilidades.ativa, true))
       .orderBy(habilidades.ordem);

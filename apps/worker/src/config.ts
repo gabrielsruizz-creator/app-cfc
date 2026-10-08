@@ -24,14 +24,21 @@ export const lerConfigWorker = (env = process.env) => esquema.parse(env);
 export function montarDependencias(db: Db, config: ConfigWorker): Dependencias {
   const gateways: Dependencias['gateways'] = {
     nao_configurado: new GatewayNaoConfigurado(),
-    asaas: new GatewayAsaas({ apiKey: config.ASAAS_API_KEY, url: config.ASAAS_URL, webhookToken: config.ASAAS_WEBHOOK_TOKEN }),
+    asaas: new GatewayAsaas({
+      apiKey: config.ASAAS_API_KEY,
+      url: config.ASAAS_URL,
+      webhookToken: config.ASAAS_WEBHOOK_TOKEN,
+    }),
   };
   // O simulador nunca é registrado em produção: cobranças "simulado" ficariam sem adaptador.
   if (config.NODE_ENV !== 'production') gateways.simulado = new GatewaySimulado();
   return {
     db,
     gateways,
-    push: config.PUSH_PROVEDOR === 'expo' ? new PushExpo(config.EXPO_ACCESS_TOKEN) : new PushNaoConfigurado(),
+    push:
+      config.PUSH_PROVEDOR === 'expo'
+        ? new PushExpo(config.EXPO_ACCESS_TOKEN)
+        : new PushNaoConfigurado(),
     cfcPlus: new CfcPlusNaoConfigurado(),
     log: logConsole,
   };

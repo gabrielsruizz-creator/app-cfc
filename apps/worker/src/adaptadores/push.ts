@@ -2,7 +2,10 @@ import type { MensagemPush, PushPort, ResultadoPush } from '../portas/push';
 
 export class PushNaoConfigurado implements PushPort {
   async enviar(): Promise<ResultadoPush> {
-    return { status: 'pendente_configuracao', motivo: 'Envio de push não configurado (PUSH_PROVEDOR)' };
+    return {
+      status: 'pendente_configuracao',
+      motivo: 'Envio de push não configurado (PUSH_PROVEDOR)',
+    };
   }
 }
 
@@ -24,10 +27,18 @@ export class PushExpo implements PushPort {
           ...(this.accessToken ? { authorization: `Bearer ${this.accessToken}` } : {}),
         },
         body: JSON.stringify(
-          m.tokens.map((to) => ({ to, title: m.titulo, body: m.corpo, data: m.dados ?? {}, sound: 'default' })),
+          m.tokens.map((to) => ({
+            to,
+            title: m.titulo,
+            body: m.corpo,
+            data: m.dados ?? {},
+            sound: 'default',
+          })),
         ),
       });
-      const corpo = (await r.json()) as { data?: { status: string; details?: { error?: string } }[] };
+      const corpo = (await r.json()) as {
+        data?: { status: string; details?: { error?: string } }[];
+      };
       if (!r.ok) return { status: 'falhou', motivo: `HTTP ${r.status}` };
       const invalidos = (corpo.data ?? [])
         .map((d, i) => (d.details?.error === 'DeviceNotRegistered' ? m.tokens[i] : null))

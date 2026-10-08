@@ -29,7 +29,8 @@ export class ArquivosController {
   ) {
     if (!arquivo) throw new ErroDominio('arquivo_ausente', 'Nenhum arquivo enviado', 'validacao');
     const f = finalidadeArquivo.safeParse(finalidade);
-    if (!f.success) throw new ErroDominio('finalidade_invalida', 'Finalidade do arquivo inválida', 'validacao');
+    if (!f.success)
+      throw new ErroDominio('finalidade_invalida', 'Finalidade do arquivo inválida', 'validacao');
     return this.servico.enviar(sessao, f.data, arquivo);
   }
 

@@ -30,7 +30,8 @@ export default function Pagamento() {
   const q = useQuery({
     queryKey: ['aula', aulaId],
     queryFn: () => api<AulaDetalhe>(`/aluno/aulas/${aulaId}`),
-    refetchInterval: (consulta) => (consulta.state.data?.status === 'aguardando_pagamento' ? 3000 : false),
+    refetchInterval: (consulta) =>
+      consulta.state.data?.status === 'aguardando_pagamento' ? 3000 : false,
   });
   const contagem = useContagem(q.data?.cobranca?.pixExpiraEm);
 
@@ -52,7 +53,11 @@ export default function Pagamento() {
               : 'O prazo do Pix terminou e o horário foi liberado. Você pode agendar novamente.'}
           </Texto>
           <Botao titulo="Ver minha aula" aoPressionar={() => router.replace(`/aula/${aula.id}`)} />
-          <Botao titulo="Ir para o início" variante="texto" aoPressionar={() => router.replace('/inicio')} />
+          <Botao
+            titulo="Ir para o início"
+            variante="texto"
+            aoPressionar={() => router.replace('/inicio')}
+          />
         </Coluna>
       </Tela>
     );
@@ -73,7 +78,9 @@ export default function Pagamento() {
 
   async function cancelar() {
     try {
-      await api(`/aluno/aulas/${aula.id}/cancelar`, { corpo: { motivo: 'Desistiu antes de pagar' } });
+      await api(`/aluno/aulas/${aula.id}/cancelar`, {
+        corpo: { motivo: 'Desistiu antes de pagar' },
+      });
       router.replace('/inicio');
     } catch (e) {
       setErro(mensagemDeErro(e));
@@ -95,7 +102,8 @@ export default function Pagamento() {
       ) : cobranca.status === 'pendente_configuracao' || cobranca.status === 'falhou' ? (
         <>
           <Aviso tipo="alerta" titulo="Pagamento indisponível no momento">
-            O meio de pagamento ainda não está configurado. Nenhum valor foi cobrado. Tente novamente mais tarde.
+            O meio de pagamento ainda não está configurado. Nenhum valor foi cobrado. Tente
+            novamente mais tarde.
           </Aviso>
           <Botao titulo="Cancelar solicitação" variante="perigo" aoPressionar={cancelar} />
         </>
@@ -107,7 +115,11 @@ export default function Pagamento() {
             </Texto>
             <View style={{ padding: 12, backgroundColor: '#fff', borderRadius: 12 }}>
               {cobranca.pixQrCodeBase64 ? (
-                <Image source={{ uri: `data:image/png;base64,${cobranca.pixQrCodeBase64}` }} style={{ width: 220, height: 220 }} accessibilityLabel="QR Code do Pix" />
+                <Image
+                  source={{ uri: `data:image/png;base64,${cobranca.pixQrCodeBase64}` }}
+                  style={{ width: 220, height: 220 }}
+                  accessibilityLabel="QR Code do Pix"
+                />
               ) : cobranca.pixCopiaCola ? (
                 <QRCode value={cobranca.pixCopiaCola} size={220} />
               ) : null}
@@ -125,13 +137,20 @@ export default function Pagamento() {
             />
           </Cartao>
           <Texto tipo="pequeno" centro>
-            Abra o app do seu banco, escolha Pix copia e cola ou leia o QR Code. A confirmação aparece aqui automaticamente.
+            Abra o app do seu banco, escolha Pix copia e cola ou leia o QR Code. A confirmação
+            aparece aqui automaticamente.
           </Texto>
           {cobranca.ambienteTeste && (
             <Aviso tipo="alerta" titulo="Ambiente de teste">
               <Coluna>
                 <Texto>Este Pix é simulado e não pode ser pago de verdade.</Texto>
-                <Botao titulo="Simular pagamento" compacto variante="destaque" carregando={simulando} aoPressionar={simular} />
+                <Botao
+                  titulo="Simular pagamento"
+                  compacto
+                  variante="destaque"
+                  carregando={simulando}
+                  aoPressionar={simular}
+                />
               </Coluna>
             </Aviso>
           )}

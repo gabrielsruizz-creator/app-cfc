@@ -72,9 +72,18 @@ async function renovarSessao(): Promise<boolean> {
   }
 }
 
-type Opcoes = { metodo?: string; corpo?: unknown; cabecalhos?: Record<string, string>; formData?: FormData };
+type Opcoes = {
+  metodo?: string;
+  corpo?: unknown;
+  cabecalhos?: Record<string, string>;
+  formData?: FormData;
+};
 
-export async function api<T = unknown>(caminho: string, opcoes: Opcoes = {}, tentativa = 0): Promise<T> {
+export async function api<T = unknown>(
+  caminho: string,
+  opcoes: Opcoes = {},
+  tentativa = 0,
+): Promise<T> {
   const headers: Record<string, string> = { accept: 'application/json', ...opcoes.cabecalhos };
   if (tokenAcesso) headers.authorization = `Bearer ${tokenAcesso}`;
   if (opcoes.corpo !== undefined) headers['content-type'] = 'application/json';
@@ -83,10 +92,15 @@ export async function api<T = unknown>(caminho: string, opcoes: Opcoes = {}, ten
     resposta = await fetch(`${urlApi()}${caminho}`, {
       method: opcoes.metodo ?? (opcoes.corpo !== undefined || opcoes.formData ? 'POST' : 'GET'),
       headers,
-      body: opcoes.formData ?? (opcoes.corpo !== undefined ? JSON.stringify(opcoes.corpo) : undefined),
+      body:
+        opcoes.formData ?? (opcoes.corpo !== undefined ? JSON.stringify(opcoes.corpo) : undefined),
     });
   } catch {
-    throw new ErroApi(0, 'sem_conexao', 'Não foi possível conectar ao servidor. Verifique sua internet.');
+    throw new ErroApi(
+      0,
+      'sem_conexao',
+      'Não foi possível conectar ao servidor. Verifique sua internet.',
+    );
   }
 
   if (resposta.status === 401 && tokenAcesso && tentativa === 0 && !caminho.startsWith('/auth/')) {
@@ -111,7 +125,11 @@ export async function api<T = unknown>(caminho: string, opcoes: Opcoes = {}, ten
 }
 
 /** Envia uma foto/arquivo e devolve o id do arquivo. */
-export async function enviarArquivo(uri: string, finalidade: string, mime = 'image/jpeg'): Promise<string> {
+export async function enviarArquivo(
+  uri: string,
+  finalidade: string,
+  mime = 'image/jpeg',
+): Promise<string> {
   const form = new FormData();
   const nome = uri.split('/').pop() ?? 'arquivo.jpg';
   form.append('finalidade', finalidade);

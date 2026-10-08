@@ -12,7 +12,12 @@ import {
 } from '@volante/db';
 import type { Consumidor } from '../outbox';
 
-const EVENTOS: TipoEvento[] = ['pedido.pago', 'pedido.confirmado', 'pedido.recusado', 'pedido.expirado'];
+const EVENTOS: TipoEvento[] = [
+  'pedido.pago',
+  'pedido.confirmado',
+  'pedido.recusado',
+  'pedido.expirado',
+];
 
 /**
  * Encaminha eventos de pedidos de autoescolas CONECTADAS ao CFC Plus. Autoescola não conectada
@@ -46,7 +51,11 @@ export const integrarCfcPlus: Consumidor = {
       if (!linha) return;
       const requisicao = {
         evento: evento.tipo,
-        pedido: { codigo: linha.pedido.codigo, itens: linha.pedido.snapshot, valorCentavos: linha.pedido.valorTotalCentavos },
+        pedido: {
+          codigo: linha.pedido.codigo,
+          itens: linha.pedido.snapshot,
+          valorCentavos: linha.pedido.valorTotalCentavos,
+        },
         aluno: { cpf: linha.cpf, nome: linha.nome },
       };
       const r = await deps.cfcPlus.executar({
@@ -65,7 +74,8 @@ export const integrarCfcPlus: Consumidor = {
         tipoRegistro: 'pedido',
         idInterno: pedidoId,
         requisicao,
-        resposta: r.status === 'sucesso' || r.status === 'erro' ? ((r.resposta ?? null) as never) : null,
+        resposta:
+          r.status === 'sucesso' || r.status === 'erro' ? ((r.resposta ?? null) as never) : null,
         httpStatus: r.status === 'pendente_configuracao' ? null : (r.httpStatus ?? null),
         status: r.status,
         tentativas: 1,

@@ -11,7 +11,10 @@ export async function obterLocalizacao(opcoes: { exigir?: boolean } = {}): Promi
   const { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== 'granted') {
     if (opcoes.exigir) {
-      Alert.alert('Localização necessária', 'Permita o acesso à localização nas configurações do aparelho para continuar.');
+      Alert.alert(
+        'Localização necessária',
+        'Permita o acesso à localização nas configurações do aparelho para continuar.',
+      );
     }
     return null;
   }
@@ -28,7 +31,11 @@ export async function enderecoDe(p: Ponto): Promise<string> {
   try {
     const [r] = await Location.reverseGeocodeAsync({ latitude: p.lat, longitude: p.lng });
     if (!r) return '';
-    return [r.street && `${r.street}${r.streetNumber ? `, ${r.streetNumber}` : ''}`, r.district, r.city ?? r.subregion]
+    return [
+      r.street && `${r.street}${r.streetNumber ? `, ${r.streetNumber}` : ''}`,
+      r.district,
+      r.city ?? r.subregion,
+    ]
       .filter(Boolean)
       .join(' - ');
   } catch {
@@ -46,7 +53,10 @@ export async function pontoDeEndereco(endereco: string): Promise<Ponto | null> {
 }
 
 /** Tira uma foto (câmera) ou escolhe da galeria. Devolve a URI local. */
-export async function escolherImagem(origem: 'camera' | 'galeria', frontal = false): Promise<string | null> {
+export async function escolherImagem(
+  origem: 'camera' | 'galeria',
+  frontal = false,
+): Promise<string | null> {
   if (origem === 'camera') {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {

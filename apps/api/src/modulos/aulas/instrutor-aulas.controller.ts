@@ -34,7 +34,14 @@ export class InstrutorAulasController {
     const inicio = de ? new Date(de) : new Date(Date.now() - 86400_000);
     const fim = ate ? new Date(ate) : new Date(Date.now() + 14 * 86400_000);
     return this.consulta.listar(atorInstrutor(s), {
-      status: ['confirmada', 'a_caminho', 'em_andamento', 'aguardando_confirmacao', 'concluida', 'solicitada'],
+      status: [
+        'confirmada',
+        'a_caminho',
+        'em_andamento',
+        'aguardando_confirmacao',
+        'concluida',
+        'solicitada',
+      ],
       de: inicio,
       ate: fim,
       ordem: 'asc',
@@ -120,7 +127,9 @@ export class InstrutorAulasController {
     const aluno = atendidos.find((a) => a.alunoId === alunoId);
     if (!aluno) throw naoEncontrado('aluno');
     const [aulas, evolucao] = await Promise.all([
-      this.consulta.listar(ator, { ordem: 'desc', limite: 100 }).then((l) => l.filter((a) => a.aluno.id === alunoId)),
+      this.consulta
+        .listar(ator, { ordem: 'desc', limite: 100 })
+        .then((l) => l.filter((a) => a.aluno.id === alunoId)),
       this.alunos.evolucao(ator, alunoId, ator.instrutorId),
     ]);
     return { aluno, aulas, evolucao };

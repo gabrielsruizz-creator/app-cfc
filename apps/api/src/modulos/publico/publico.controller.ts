@@ -25,7 +25,10 @@ export class PublicoController {
   }
 
   @Get('instrutores/:id/horarios')
-  horarios(@Param('id', ParseUUIDPipe) id: string, @Query(new ZodPipe(consultaHorarios)) q: { data: string }) {
+  horarios(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query(new ZodPipe(consultaHorarios)) q: { data: string },
+  ) {
     return this.servico.horarios(id, q.data);
   }
 

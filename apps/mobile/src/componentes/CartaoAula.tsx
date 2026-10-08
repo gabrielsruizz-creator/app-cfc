@@ -5,15 +5,33 @@ import { dataCurta, hora } from '../util/formatos';
 import { StatusAula } from './StatusAula';
 import { Avatar, Cartao, Coluna, Linha, Texto } from './ui';
 
-export function CartaoAula({ aula, visao, aoPressionar }: { aula: AulaResumo; visao: 'aluno' | 'instrutor'; aoPressionar: () => void }) {
+export function CartaoAula({
+  aula,
+  visao,
+  aoPressionar,
+}: {
+  aula: AulaResumo;
+  visao: 'aluno' | 'instrutor';
+  aoPressionar: () => void;
+}) {
   const { cores } = useTema();
   const pessoa = visao === 'aluno' ? aula.instrutor : aula.aluno;
   return (
-    <Cartao aoPressionar={aoPressionar} rotuloAcessivel={`Aula com ${pessoa.nome} em ${dataCurta(aula.inicio)} às ${hora(aula.inicio)}`}>
+    <Cartao
+      aoPressionar={aoPressionar}
+      rotuloAcessivel={`Aula com ${pessoa.nome} em ${dataCurta(aula.inicio)} às ${hora(aula.inicio)}`}
+    >
       <Linha gap={12}>
-        <Avatar nome={pessoa.nome} arquivoId={pessoa.fotoArquivoId} tamanho={48} publico={visao === 'aluno'} />
+        <Avatar
+          nome={pessoa.nome}
+          arquivoId={pessoa.fotoArquivoId}
+          tamanho={48}
+          publico={visao === 'aluno'}
+        />
         <Coluna gap={2} style={{ flex: 1 }}>
-          <Texto negrito linhas={1}>{pessoa.nome}</Texto>
+          <Texto negrito linhas={1}>
+            {pessoa.nome}
+          </Texto>
           <Texto tipo="suave">
             {dataCurta(aula.inicio)} · {hora(aula.inicio)}–{hora(aula.fim)}
           </Texto>

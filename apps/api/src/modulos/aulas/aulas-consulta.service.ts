@@ -104,7 +104,13 @@ export class AulasConsultaService {
 
   async listar(
     ator: Ator,
-    filtro: { status?: StatusAula[]; de?: Date; ate?: Date; ordem?: 'asc' | 'desc'; limite?: number },
+    filtro: {
+      status?: StatusAula[];
+      de?: Date;
+      ate?: Date;
+      ordem?: 'asc' | 'desc';
+      limite?: number;
+    },
   ): Promise<AulaResumo[]> {
     return this.banco.comAtor(ator, async (tx) => {
       const condicoes = [];
@@ -135,8 +141,13 @@ export class AulasConsultaService {
         .from(aulaHistorico)
         .where(eq(aulaHistorico.aulaId, a.id))
         .orderBy(asc(aulaHistorico.criadoEm));
-      const [veiculo] = a.veiculoId ? await tx.select().from(veiculos).where(eq(veiculos.id, a.veiculoId)) : [];
-      const [anotacao] = await tx.select().from(aulaAnotacoes).where(eq(aulaAnotacoes.aulaId, a.id));
+      const [veiculo] = a.veiculoId
+        ? await tx.select().from(veiculos).where(eq(veiculos.id, a.veiculoId))
+        : [];
+      const [anotacao] = await tx
+        .select()
+        .from(aulaAnotacoes)
+        .where(eq(aulaAnotacoes.aulaId, a.id));
       const evolucao = await tx
         .select({
           habilidadeId: registrosEvolucao.habilidadeId,
@@ -166,7 +177,12 @@ export class AulasConsultaService {
           criadoEm: h.criadoEm.toISOString(),
         })),
         veiculo: veiculo
-          ? { marca: veiculo.marca, modelo: veiculo.modelo, cor: veiculo.cor, cambio: veiculo.cambio }
+          ? {
+              marca: veiculo.marca,
+              modelo: veiculo.modelo,
+              cor: veiculo.cor,
+              cambio: veiculo.cambio,
+            }
           : null,
         anotacao: anotacao && (!ehAluno || anotacao.visivelAluno) ? anotacao.texto : null,
         evolucao,
@@ -178,7 +194,13 @@ export class AulasConsultaService {
   async avaliacoesRecebidas(ator: Ator, instrutorId: string) {
     return this.banco.comAtor(ator, (tx) =>
       tx
-        .select({ id: avaliacoes.id, nota: avaliacoes.nota, comentario: avaliacoes.comentario, criadoEm: avaliacoes.criadoEm, status: avaliacoes.status })
+        .select({
+          id: avaliacoes.id,
+          nota: avaliacoes.nota,
+          comentario: avaliacoes.comentario,
+          criadoEm: avaliacoes.criadoEm,
+          status: avaliacoes.status,
+        })
         .from(avaliacoes)
         .where(eq(avaliacoes.instrutorId, instrutorId))
         .orderBy(desc(avaliacoes.criadoEm))

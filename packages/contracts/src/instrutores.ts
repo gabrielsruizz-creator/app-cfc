@@ -69,7 +69,11 @@ export const veiculoEntrada = z.object({
     .regex(/^[A-Z]{3}-?\d[A-Z0-9]\d{2}$/, 'Placa inválida'),
   marca: z.string().trim().min(2).max(40),
   modelo: z.string().trim().min(1).max(60),
-  ano: z.number().int().min(1980).max(new Date().getFullYear() + 1),
+  ano: z
+    .number()
+    .int()
+    .min(1980)
+    .max(new Date().getFullYear() + 1),
   cor: z.string().trim().max(30).optional(),
   cambio,
   adaptadoPcd: z.boolean().default(false),

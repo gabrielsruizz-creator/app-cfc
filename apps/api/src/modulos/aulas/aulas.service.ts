@@ -49,9 +49,16 @@ export class AulasService {
   ) {}
 
   /** Retorna o id da aula (nova ou já criada com a mesma chave de idempotência). */
-  async solicitar(ator: Ator & { alunoId: string }, dados: SolicitarAula, chaveIdempotencia: string) {
+  async solicitar(
+    ator: Ator & { alunoId: string },
+    dados: SolicitarAula,
+    chaveIdempotencia: string,
+  ) {
     if (dados.creditoId) {
-      throw new ErroDominio('pacotes_em_breve', 'Agendamento com saldo de pacote chega na próxima versão');
+      throw new ErroDominio(
+        'pacotes_em_breve',
+        'Agendamento com saldo de pacote chega na próxima versão',
+      );
     }
     const chave = `${ator.alunoId}:${chaveIdempotencia}`;
     return this.banco.comAtor(ator, async (tx) => {
@@ -60,7 +67,10 @@ export class AulasService {
         .from(cobrancas)
         .where(eq(cobrancas.chaveIdempotencia, chave));
       if (existente) {
-        const [a] = await tx.select({ id: aulas.id }).from(aulas).where(eq(aulas.pedidoId, existente.pedidoId));
+        const [a] = await tx
+          .select({ id: aulas.id })
+          .from(aulas)
+          .where(eq(aulas.pedidoId, existente.pedidoId));
         return a!.id;
       }
       const r = await solicitarAulaAvulsa(tx, {
@@ -79,7 +89,11 @@ export class AulasService {
   }
 
   /** Carrega a aula no contexto do usuário (RLS garante que ela é dele) e trava a linha. */
-  private async comAula<T>(ator: Ator, aulaId: string, fn: (aula: Aula, tx: Parameters<Parameters<BancoService['comAtor']>[1]>[0]) => Promise<T>) {
+  private async comAula<T>(
+    ator: Ator,
+    aulaId: string,
+    fn: (aula: Aula, tx: Parameters<Parameters<BancoService['comAtor']>[1]>[0]) => Promise<T>,
+  ) {
     return this.banco.comAtor(ator, async (tx) => {
       const aula = await carregarAulaParaAlterar(tx, aulaId);
       return fn(aula, tx);
@@ -103,7 +117,11 @@ export class AulasService {
     return this.comAula(ator, aulaId, async (aula, tx) => {
       const cancelaveis = ['aguardando_pagamento', 'solicitada', 'confirmada', 'a_caminho'];
       if (!cancelaveis.includes(aula.status)) {
-        throw new ErroDominio('nao_cancelavel', 'Esta aula não pode mais ser cancelada', 'conflito');
+        throw new ErroDominio(
+          'nao_cancelavel',
+          'Esta aula não pode mais ser cancelada',
+          'conflito',
+        );
       }
       await this.banco.elevarParaSistema(tx);
       await cancelarAula(tx, aula, {
@@ -127,9 +145,19 @@ export class AulasService {
         );
       }
       const { instrutor } = await carregarInstrutorAtivo(tx, aula.instrutorId);
-      const livres = await horariosLivresInstrutor(tx, instrutor, dataLocal(novoInicio, instrutor.fusoHorario), agora);
+      const livres = await horariosLivresInstrutor(
+        tx,
+        instrutor,
+        dataLocal(novoInicio, instrutor.fusoHorario),
+        agora,
+      );
       const slot = livres.find((l) => l.inicio.getTime() === novoInicio.getTime());
-      if (!slot) throw new ErroDominio('horario_indisponivel', 'Esse horário não está disponível', 'conflito');
+      if (!slot)
+        throw new ErroDominio(
+          'horario_indisponivel',
+          'Esse horário não está disponível',
+          'conflito',
+        );
       const cfg = await lerConfiguracoes(tx);
       await mudarStatusAula(tx, aula, 'solicitada', {
         atorUsuarioId: ator.usuarioId,
@@ -156,7 +184,11 @@ export class AulasService {
   confirmarFim(ator: Ator, aulaId: string) {
     return this.comAula(ator, aulaId, async (aula, tx) => {
       if (aula.status !== 'aguardando_confirmacao') {
-        throw new ErroDominio('aula_nao_finalizada', 'O instrutor ainda não finalizou esta aula', 'conflito');
+        throw new ErroDominio(
+          'aula_nao_finalizada',
+          'O instrutor ainda não finalizou esta aula',
+          'conflito',
+        );
       }
       await this.banco.elevarParaSistema(tx);
       await concluirAula(tx, aula.id, 'aluno', { atorUsuarioId: ator.usuarioId });
@@ -166,9 +198,15 @@ export class AulasService {
   avaliar(ator: Ator & { alunoId: string }, aulaId: string, dados: AvaliarAula) {
     return this.comAula(ator, aulaId, async (aula, tx) => {
       if (aula.status !== 'concluida') {
-        throw new ErroDominio('aula_nao_concluida', 'Você poderá avaliar depois que a aula for concluída');
+        throw new ErroDominio(
+          'aula_nao_concluida',
+          'Você poderá avaliar depois que a aula for concluída',
+        );
       }
-      const [existente] = await tx.select({ id: avaliacoes.id }).from(avaliacoes).where(eq(avaliacoes.aulaId, aula.id));
+      const [existente] = await tx
+        .select({ id: avaliacoes.id })
+        .from(avaliacoes)
+        .where(eq(avaliacoes.aulaId, aula.id));
       if (existente) throw new ErroDominio('ja_avaliada', 'Você já avaliou esta aula', 'conflito');
       await tx.insert(avaliacoes).values({
         aulaId: aula.id,
@@ -200,12 +238,23 @@ export class AulasService {
   aceitar(ator: Ator, aulaId: string) {
     return this.comAula(ator, aulaId, async (aula, tx) => {
       if (aula.status !== 'solicitada') {
-        throw new ErroDominio('nao_aceitavel', 'Esta solicitação não está mais pendente', 'conflito');
+        throw new ErroDominio(
+          'nao_aceitavel',
+          'Esta solicitação não está mais pendente',
+          'conflito',
+        );
       }
       if (aula.aceiteAte && aula.aceiteAte < new Date()) {
-        throw new ErroDominio('prazo_encerrado', 'O prazo para aceitar esta aula terminou', 'conflito');
+        throw new ErroDominio(
+          'prazo_encerrado',
+          'O prazo para aceitar esta aula terminou',
+          'conflito',
+        );
       }
-      await mudarStatusAula(tx, aula, 'confirmada', { atorUsuarioId: ator.usuarioId, motivo: 'Aceita pelo instrutor' });
+      await mudarStatusAula(tx, aula, 'confirmada', {
+        atorUsuarioId: ator.usuarioId,
+        motivo: 'Aceita pelo instrutor',
+      });
       await publicarEvento(tx, {
         tipo: 'aula.confirmada',
         agregadoTipo: 'aula',
@@ -219,10 +268,17 @@ export class AulasService {
   recusar(ator: Ator, aulaId: string, motivo: string) {
     return this.comAula(ator, aulaId, async (aula, tx) => {
       if (aula.status !== 'solicitada') {
-        throw new ErroDominio('nao_recusavel', 'Esta solicitação não está mais pendente', 'conflito');
+        throw new ErroDominio(
+          'nao_recusavel',
+          'Esta solicitação não está mais pendente',
+          'conflito',
+        );
       }
       await this.banco.elevarParaSistema(tx);
-      await encerrarComEstornoTotal(tx, aula, 'recusada', { motivo, atorUsuarioId: ator.usuarioId });
+      await encerrarComEstornoTotal(tx, aula, 'recusada', {
+        motivo,
+        atorUsuarioId: ator.usuarioId,
+      });
       await publicarEvento(tx, {
         tipo: 'aula.recusada',
         agregadoTipo: 'aula',
@@ -236,20 +292,30 @@ export class AulasService {
   async checkin(ator: Ator, aulaId: string, dados: Checkin) {
     const resultado = await this.comAula(ator, aulaId, async (aula, tx) => {
       if (!['confirmada', 'a_caminho'].includes(aula.status)) {
-        throw new ErroDominio('checkin_indisponivel', 'O check-in só é possível em aulas confirmadas', 'conflito');
+        throw new ErroDominio(
+          'checkin_indisponivel',
+          'O check-in só é possível em aulas confirmadas',
+          'conflito',
+        );
       }
       const cfg = await lerConfiguracoes(tx);
       const agora = new Date();
-      const liberadoEm = new Date(aula.inicio.getTime() - cfg['aula.checkin_antecedencia_min'] * 60_000);
+      const liberadoEm = new Date(
+        aula.inicio.getTime() - cfg['aula.checkin_antecedencia_min'] * 60_000,
+      );
       if (agora < liberadoEm) {
         throw new ErroDominio(
           'checkin_cedo',
           `O check-in é liberado ${cfg['aula.checkin_antecedencia_min']} minutos antes do início da aula`,
         );
       }
-      if (agora > aula.fim) throw new ErroDominio('checkin_tarde', 'O horário desta aula já terminou');
+      if (agora > aula.fim)
+        throw new ErroDominio('checkin_tarde', 'O horário desta aula já terminou');
       if (aula.tentativasCheckin >= MAX_TENTATIVAS_CHECKIN) {
-        throw new ErroDominio('checkin_bloqueado', 'Muitas tentativas com código errado. Fale com o suporte.');
+        throw new ErroDominio(
+          'checkin_bloqueado',
+          'Muitas tentativas com código errado. Fale com o suporte.',
+        );
       }
       if (dados.codigo !== aula.codigoCheckin) return { codigoErrado: true as const };
       const distancia = distanciaMetros(dados.local, aula.pontoEncontro);
@@ -282,14 +348,22 @@ export class AulasService {
           .set({ tentativasCheckin: sql`${aulas.tentativasCheckin} + 1` })
           .where(eq(aulas.id, aulaId)),
       );
-      throw new ErroDominio('codigo_invalido', 'Código incorreto. Peça ao aluno o código exibido no app dele.', 'validacao');
+      throw new ErroDominio(
+        'codigo_invalido',
+        'Código incorreto. Peça ao aluno o código exibido no app dele.',
+        'validacao',
+      );
     }
   }
 
   checkout(ator: Ator, aulaId: string, local: Ponto) {
     return this.comAula(ator, aulaId, async (aula, tx) => {
       if (aula.status !== 'em_andamento') {
-        throw new ErroDominio('checkout_indisponivel', 'Faça o check-in antes de finalizar a aula', 'conflito');
+        throw new ErroDominio(
+          'checkout_indisponivel',
+          'Faça o check-in antes de finalizar a aula',
+          'conflito',
+        );
       }
       await mudarStatusAula(tx, aula, 'aguardando_confirmacao', {
         atorUsuarioId: ator.usuarioId,
@@ -310,7 +384,10 @@ export class AulasService {
   registrarEvolucao(ator: Ator, aulaId: string, dados: RegistrarEvolucao) {
     return this.comAula(ator, aulaId, async (aula, tx) => {
       if (!['em_andamento', 'aguardando_confirmacao', 'concluida'].includes(aula.status)) {
-        throw new ErroDominio('evolucao_indisponivel', 'Registre a evolução depois do check-in da aula');
+        throw new ErroDominio(
+          'evolucao_indisponivel',
+          'Registre a evolução depois do check-in da aula',
+        );
       }
       for (const r of dados.registros) {
         await tx

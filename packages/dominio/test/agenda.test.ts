@@ -15,7 +15,11 @@ const base = {
 
 const horas = (slots: { inicio: Date }[]) =>
   slots.map((s) =>
-    s.inicio.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }),
+    s.inicio.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
   );
 
 describe('horários livres', () => {
@@ -31,8 +35,12 @@ describe('horários livres', () => {
   it('remove horários que conflitam com aulas (considerando o intervalo) e bloqueios', () => {
     const slots = calcularHorariosLivres({
       ...base,
-      ocupados: [{ inicio: new Date('2026-10-12T12:05:00Z'), fim: new Date('2026-10-12T12:55:00Z') }],
-      bloqueios: [{ inicio: new Date('2026-10-12T14:00:00Z'), fim: new Date('2026-10-12T15:00:00Z') }],
+      ocupados: [
+        { inicio: new Date('2026-10-12T12:05:00Z'), fim: new Date('2026-10-12T12:55:00Z') },
+      ],
+      bloqueios: [
+        { inicio: new Date('2026-10-12T14:00:00Z'), fim: new Date('2026-10-12T15:00:00Z') },
+      ],
     });
     // 09:05–09:55 ocupado (+10 min de intervalo) derruba 09:00 e 10:00; o bloqueio das 11:00 derruba 11:00
     expect(horas(slots)).toEqual(['08:00']);

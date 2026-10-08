@@ -1,4 +1,9 @@
-import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  type CanActivate,
+  type ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import {
   adminsPlataforma,
@@ -29,7 +34,10 @@ export class AutenticacaoGuard implements CanActivate {
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
-    const publico = this.reflector.getAllAndOverride<boolean>(ROTA_PUBLICA, [ctx.getHandler(), ctx.getClass()]);
+    const publico = this.reflector.getAllAndOverride<boolean>(ROTA_PUBLICA, [
+      ctx.getHandler(),
+      ctx.getClass(),
+    ]);
     const req = ctx.switchToHttp().getRequest<Request & { sessao?: Sessao }>();
     const cabecalho = req.headers.authorization;
     const token = cabecalho?.startsWith('Bearer ') ? cabecalho.slice(7) : null;
@@ -58,7 +66,10 @@ export class AutenticacaoGuard implements CanActivate {
       .where(and(eq(usuarios.id, dados.usuarioId), eq(sessoes.usuarioId, dados.usuarioId)));
     if (!linha || linha.sessaoRevogada || linha.usuario.status !== 'ativo') return null;
 
-    const [aluno] = await db.select({ id: alunos.id }).from(alunos).where(eq(alunos.usuarioId, dados.usuarioId));
+    const [aluno] = await db
+      .select({ id: alunos.id })
+      .from(alunos)
+      .where(eq(alunos.usuarioId, dados.usuarioId));
     const [instrutor] = await db
       .select({ id: instrutores.id, status: instrutores.status })
       .from(instrutores)
@@ -67,11 +78,18 @@ export class AutenticacaoGuard implements CanActivate {
       .select({ nivel: adminsPlataforma.nivel })
       .from(adminsPlataforma)
       .where(eq(adminsPlataforma.usuarioId, dados.usuarioId));
-    const vinculos = await this.banco.comAtor({ tipo: 'anonimo', usuarioId: dados.usuarioId }, (tx) =>
-      tx
-        .select({ autoescolaId: autoescolaMembros.autoescolaId, papel: autoescolaMembros.papel })
-        .from(autoescolaMembros)
-        .where(and(eq(autoescolaMembros.usuarioId, dados.usuarioId), eq(autoescolaMembros.status, 'ativo'))),
+    const vinculos = await this.banco.comAtor(
+      { tipo: 'anonimo', usuarioId: dados.usuarioId },
+      (tx) =>
+        tx
+          .select({ autoescolaId: autoescolaMembros.autoescolaId, papel: autoescolaMembros.papel })
+          .from(autoescolaMembros)
+          .where(
+            and(
+              eq(autoescolaMembros.usuarioId, dados.usuarioId),
+              eq(autoescolaMembros.status, 'ativo'),
+            ),
+          ),
     );
 
     return {
@@ -88,4 +106,3 @@ export class AutenticacaoGuard implements CanActivate {
     };
   }
 }
-

@@ -19,7 +19,13 @@ import {
 import { api, mensagemDeErro } from '../../src/servicos/api';
 import { raio } from '../../src/tema/cores';
 import { useTema } from '../../src/tema/TemaProvider';
-import { dataCurta, dataHora, formatarCentavos, hora, NOMES_STATUS_AULA } from '../../src/util/formatos';
+import {
+  dataCurta,
+  dataHora,
+  formatarCentavos,
+  hora,
+  NOMES_STATUS_AULA,
+} from '../../src/util/formatos';
 
 export default function AulaAluno() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,7 +36,10 @@ export default function AulaAluno() {
   const q = useQuery({
     queryKey: ['aula', id],
     queryFn: () => api<AulaDetalhe>(`/aluno/aulas/${id}`),
-    refetchInterval: (c) => (['confirmada', 'em_andamento', 'solicitada'].includes(c.state.data?.status ?? '') ? 15000 : false),
+    refetchInterval: (c) =>
+      ['confirmada', 'em_andamento', 'solicitada'].includes(c.state.data?.status ?? '')
+        ? 15000
+        : false,
   });
 
   if (q.isLoading || !q.data) return <Carregando />;
@@ -61,7 +70,12 @@ export default function AulaAluno() {
         {
           text: 'Cancelar aula',
           style: 'destructive',
-          onPress: () => executar('cancelar', () => api(`/aluno/aulas/${a.id}/cancelar`, { corpo: { motivo: 'Cancelada pelo aluno no app' } })),
+          onPress: () =>
+            executar('cancelar', () =>
+              api(`/aluno/aulas/${a.id}/cancelar`, {
+                corpo: { motivo: 'Cancelada pelo aluno no app' },
+              }),
+            ),
         },
       ]);
     } catch (e) {
@@ -82,7 +96,11 @@ export default function AulaAluno() {
 
       {a.status === 'aguardando_pagamento' && (
         <Aviso tipo="alerta" titulo="Falta pagar">
-          <Botao titulo="Pagar com Pix" compacto aoPressionar={() => router.push(`/pagamento/${a.id}`)} />
+          <Botao
+            titulo="Pagar com Pix"
+            compacto
+            aoPressionar={() => router.push(`/pagamento/${a.id}`)}
+          />
         </Aviso>
       )}
       {a.status === 'solicitada' && a.aceiteAte && (
@@ -90,9 +108,17 @@ export default function AulaAluno() {
       )}
 
       {['confirmada', 'a_caminho'].includes(a.status) && a.codigoCheckin && (
-        <Cartao style={{ alignItems: 'center', backgroundColor: cores.primariaSuave, borderColor: cores.primaria }}>
+        <Cartao
+          style={{
+            alignItems: 'center',
+            backgroundColor: cores.primariaSuave,
+            borderColor: cores.primaria,
+          }}
+        >
           <Texto tipo="rotulo">Código de check-in</Texto>
-          <Texto style={{ fontSize: 44, fontWeight: '800', letterSpacing: 12, color: cores.primaria }}>
+          <Texto
+            style={{ fontSize: 44, fontWeight: '800', letterSpacing: 12, color: cores.primaria }}
+          >
             {a.codigoCheckin}
           </Texto>
           <Texto tipo="pequeno" centro>
@@ -109,14 +135,23 @@ export default function AulaAluno() {
               titulo="Confirmar fim da aula"
               compacto
               carregando={acao === 'confirmar'}
-              aoPressionar={() => executar('confirmar', () => api(`/aluno/aulas/${a.id}/confirmar-fim`, { metodo: 'POST' }))}
+              aoPressionar={() =>
+                executar('confirmar', () =>
+                  api(`/aluno/aulas/${a.id}/confirmar-fim`, { metodo: 'POST' }),
+                )
+              }
             />
           </Coluna>
         </Aviso>
       )}
 
       {a.status === 'concluida' && !a.avaliada && (
-        <Botao titulo="Avaliar esta aula" icone="star" variante="destaque" aoPressionar={() => router.push(`/avaliar/${a.id}`)} />
+        <Botao
+          titulo="Avaliar esta aula"
+          icone="star"
+          variante="destaque"
+          aoPressionar={() => router.push(`/avaliar/${a.id}`)}
+        />
       )}
 
       <Cartao>
@@ -135,7 +170,8 @@ export default function AulaAluno() {
             <Divisor />
             <Texto>
               🚗 {a.veiculo.marca} {a.veiculo.modelo}
-              {a.veiculo.cor ? ` · ${a.veiculo.cor}` : ''} · {a.veiculo.cambio === 'automatico' ? 'automático' : 'manual'}
+              {a.veiculo.cor ? ` · ${a.veiculo.cor}` : ''} ·{' '}
+              {a.veiculo.cambio === 'automatico' ? 'automático' : 'manual'}
             </Texto>
           </>
         )}
@@ -145,7 +181,13 @@ export default function AulaAluno() {
         <Texto tipo="rotulo">Ponto de encontro</Texto>
         <Texto>{a.pontoEncontroEndereco}</Texto>
         {a.pontoEncontroReferencia && <Texto tipo="suave">{a.pontoEncontroReferencia}</Texto>}
-        <Botao titulo="Abrir no mapa" compacto variante="secundario" icone="navigate" aoPressionar={() => Linking.openURL(mapsUrl)} />
+        <Botao
+          titulo="Abrir no mapa"
+          compacto
+          variante="secundario"
+          icone="navigate"
+          aoPressionar={() => Linking.openURL(mapsUrl)}
+        />
       </Cartao>
 
       {(a.anotacao || a.evolucao.length > 0) && (
@@ -157,7 +199,15 @@ export default function AulaAluno() {
               <Texto>{e.habilidade}</Texto>
               <View style={{ flexDirection: 'row', gap: 3 }}>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <View key={n} style={{ width: 14, height: 8, borderRadius: raio.sm, backgroundColor: n <= e.nivel ? cores.primaria : cores.borda }} />
+                  <View
+                    key={n}
+                    style={{
+                      width: 14,
+                      height: 8,
+                      borderRadius: raio.sm,
+                      backgroundColor: n <= e.nivel ? cores.primaria : cores.borda,
+                    }}
+                  />
                 ))}
               </View>
             </Linha>
@@ -174,13 +224,27 @@ export default function AulaAluno() {
           </Linha>
         ))}
         {a.motivoCancelamento && <Texto tipo="suave">Motivo: {a.motivoCancelamento}</Texto>}
-        {a.multaCancelamentoCentavos > 0 && <Texto tipo="suave">Multa aplicada: {formatarCentavos(a.multaCancelamentoCentavos)}</Texto>}
+        {a.multaCancelamentoCentavos > 0 && (
+          <Texto tipo="suave">
+            Multa aplicada: {formatarCentavos(a.multaCancelamentoCentavos)}
+          </Texto>
+        )}
       </Cartao>
 
       {ativa && (
         <Coluna>
-          <Botao titulo="Remarcar" variante="secundario" icone="calendar" aoPressionar={() => router.push(`/agendar/${a.instrutor.id}?remarcar=${a.id}`)} />
-          <Botao titulo="Cancelar aula" variante="perigo" carregando={acao === 'cancelar'} aoPressionar={cancelar} />
+          <Botao
+            titulo="Remarcar"
+            variante="secundario"
+            icone="calendar"
+            aoPressionar={() => router.push(`/agendar/${a.instrutor.id}?remarcar=${a.id}`)}
+          />
+          <Botao
+            titulo="Cancelar aula"
+            variante="perigo"
+            carregando={acao === 'cancelar'}
+            aoPressionar={cancelar}
+          />
         </Coluna>
       )}
     </Tela>

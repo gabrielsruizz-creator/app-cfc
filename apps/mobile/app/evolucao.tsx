@@ -5,7 +5,10 @@ import { Carregando, Tela, Vazio } from '../src/componentes/ui';
 import { api } from '../src/servicos/api';
 
 export default function Evolucao() {
-  const q = useQuery({ queryKey: ['aluno', 'evolucao'], queryFn: () => api<EvolucaoAluno>('/aluno/evolucao') });
+  const q = useQuery({
+    queryKey: ['aluno', 'evolucao'],
+    queryFn: () => api<EvolucaoAluno>('/aluno/evolucao'),
+  });
   if (q.isLoading) return <Carregando />;
   if (!q.data) return <Vazio titulo="Não foi possível carregar" />;
   return (

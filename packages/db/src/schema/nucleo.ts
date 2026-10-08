@@ -38,7 +38,10 @@ export const notificacoes = pgTable(
     titulo: text().notNull(),
     corpo: text().notNull(),
     dados: jsonb().$type<Record<string, unknown>>().notNull().default({}),
-    canais: text().array().notNull().default(sql`'{push}'::text[]`),
+    canais: text()
+      .array()
+      .notNull()
+      .default(sql`'{push}'::text[]`),
     lidaEm: instanteTz(),
     criadoEm: criadoEm(),
   },
@@ -178,7 +181,12 @@ export const integracoesAutoescola = pgTable(
   (t) => [
     uniqueIndex('integracoes_autoescola_uk').on(t.autoescolaId, t.sistema),
     checkValores('integracoes_sistema_ck', t.sistema, SISTEMAS_EXTERNOS),
-    checkValores('integracoes_status_ck', t.status, ['nao_conectada', 'conectada', 'erro', 'desativada']),
+    checkValores('integracoes_status_ck', t.status, [
+      'nao_conectada',
+      'conectada',
+      'erro',
+      'desativada',
+    ]),
   ],
 );
 
@@ -197,8 +205,18 @@ export const vinculosExternos = pgTable(
     ...carimbos,
   },
   (t) => [
-    uniqueIndex('vinculos_interno_uk').on(t.sistemaExterno, t.autoescolaId, t.tipoRegistro, t.idInterno),
-    uniqueIndex('vinculos_externo_uk').on(t.sistemaExterno, t.autoescolaId, t.tipoRegistro, t.idExterno),
+    uniqueIndex('vinculos_interno_uk').on(
+      t.sistemaExterno,
+      t.autoescolaId,
+      t.tipoRegistro,
+      t.idInterno,
+    ),
+    uniqueIndex('vinculos_externo_uk').on(
+      t.sistemaExterno,
+      t.autoescolaId,
+      t.tipoRegistro,
+      t.idExterno,
+    ),
     checkValores('vinculos_tipo_ck', t.tipoRegistro, TIPOS_REGISTRO_EXTERNO),
     checkValores('vinculos_sistema_ck', t.sistemaExterno, SISTEMAS_EXTERNOS),
   ],

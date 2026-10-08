@@ -13,7 +13,10 @@ import { Publico, SessaoAtual, type Sessao } from '../../nucleo/auth/sessao';
 import { ZodPipe } from '../../nucleo/zod.pipe';
 import { IdentidadeService } from './identidade.service';
 
-const origem = (req: Request) => ({ ip: req.ip ?? null, userAgent: req.headers['user-agent'] ?? null });
+const origem = (req: Request) => ({
+  ip: req.ip ?? null,
+  userAgent: req.headers['user-agent'] ?? null,
+});
 
 @Controller()
 export class IdentidadeController {
@@ -56,8 +59,13 @@ export class IdentidadeController {
   @Post('eu/dispositivos-push')
   async registrarDispositivo(
     @SessaoAtual() sessao: Sessao,
-    @Body(new ZodPipe(registrarDispositivoPush)) dados: { expoPushToken: string; plataforma: string },
+    @Body(new ZodPipe(registrarDispositivoPush))
+    dados: { expoPushToken: string; plataforma: string },
   ) {
-    await this.servico.registrarDispositivo(sessao.usuarioId, dados.expoPushToken, dados.plataforma);
+    await this.servico.registrarDispositivo(
+      sessao.usuarioId,
+      dados.expoPushToken,
+      dados.plataforma,
+    );
   }
 }

@@ -1,15 +1,37 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Aviso, Botao, BotaoIcone, Campo, Cartao, Carregando, Chip, Coluna, Linha, Tela, Texto, Vazio } from '../../src/componentes/ui';
+import {
+  Aviso,
+  Botao,
+  BotaoIcone,
+  Campo,
+  Cartao,
+  Carregando,
+  Chip,
+  Coluna,
+  Linha,
+  Tela,
+  Texto,
+  Vazio,
+} from '../../src/componentes/ui';
 import { api, mensagemDeErro } from '../../src/servicos/api';
 import { useTema } from '../../src/tema/TemaProvider';
 import { dataBrParaIso, dataCurta, mascararData } from '../../src/util/formatos';
 
-type Bloqueio = { id: string; inicio: string; fim: string; tipo: 'bloqueio' | 'ferias'; motivo: string | null };
+type Bloqueio = {
+  id: string;
+  inicio: string;
+  fim: string;
+  tipo: 'bloqueio' | 'ferias';
+  motivo: string | null;
+};
 
 export default function Bloqueios() {
   const { cores } = useTema();
-  const q = useQuery({ queryKey: ['instrutor', 'bloqueios'], queryFn: () => api<Bloqueio[]>('/instrutor/bloqueios') });
+  const q = useQuery({
+    queryKey: ['instrutor', 'bloqueios'],
+    queryFn: () => api<Bloqueio[]>('/instrutor/bloqueios'),
+  });
   const [inicio, setInicio] = useState('');
   const [fim, setFim] = useState('');
   const [tipo, setTipo] = useState<'bloqueio' | 'ferias'>('bloqueio');
@@ -26,7 +48,14 @@ export default function Bloqueios() {
     try {
       const ini = new Date(`${di}T00:00:00`);
       const fi = new Date(`${df}T23:59:59`);
-      await api('/instrutor/bloqueios', { corpo: { inicio: ini.toISOString(), fim: fi.toISOString(), tipo, motivo: motivo || undefined } });
+      await api('/instrutor/bloqueios', {
+        corpo: {
+          inicio: ini.toISOString(),
+          fim: fi.toISOString(),
+          tipo,
+          motivo: motivo || undefined,
+        },
+      });
       setInicio('');
       setFim('');
       setMotivo('');
@@ -45,15 +74,35 @@ export default function Bloqueios() {
         <Texto tipo="subtitulo">Novo bloqueio</Texto>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         <Linha>
-          <Chip rotulo="Folga" selecionado={tipo === 'bloqueio'} aoPressionar={() => setTipo('bloqueio')} />
-          <Chip rotulo="Férias" selecionado={tipo === 'ferias'} aoPressionar={() => setTipo('ferias')} />
+          <Chip
+            rotulo="Folga"
+            selecionado={tipo === 'bloqueio'}
+            aoPressionar={() => setTipo('bloqueio')}
+          />
+          <Chip
+            rotulo="Férias"
+            selecionado={tipo === 'ferias'}
+            aoPressionar={() => setTipo('ferias')}
+          />
         </Linha>
         <Linha>
           <Coluna style={{ flex: 1 }}>
-            <Campo rotulo="De" value={inicio} onChangeText={(v) => setInicio(mascararData(v))} placeholder="DD/MM/AAAA" keyboardType="number-pad" />
+            <Campo
+              rotulo="De"
+              value={inicio}
+              onChangeText={(v) => setInicio(mascararData(v))}
+              placeholder="DD/MM/AAAA"
+              keyboardType="number-pad"
+            />
           </Coluna>
           <Coluna style={{ flex: 1 }}>
-            <Campo rotulo="Até" value={fim} onChangeText={(v) => setFim(mascararData(v))} placeholder="DD/MM/AAAA" keyboardType="number-pad" />
+            <Campo
+              rotulo="Até"
+              value={fim}
+              onChangeText={(v) => setFim(mascararData(v))}
+              placeholder="DD/MM/AAAA"
+              keyboardType="number-pad"
+            />
           </Coluna>
         </Linha>
         <Campo rotulo="Motivo (opcional)" value={motivo} onChangeText={setMotivo} />

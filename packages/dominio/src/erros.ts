@@ -14,7 +14,11 @@ export class ErroDominio extends Error {
 }
 
 export const naoEncontrado = (o_que: string) =>
-  new ErroDominio(`${o_que}_nao_encontrado`, `${o_que.replace(/_/g, ' ')} não encontrado(a)`, 'nao_encontrado');
+  new ErroDominio(
+    `${o_que}_nao_encontrado`,
+    `${o_que.replace(/_/g, ' ')} não encontrado(a)`,
+    'nao_encontrado',
+  );
 
 /** Identifica violações de restrição do Postgres, inclusive quando embrulhadas pelo Drizzle. */
 export function codigoErroPostgres(erro: unknown): { code?: string; constraint?: string } {

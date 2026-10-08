@@ -19,7 +19,13 @@ import { atorAdmin, type Sessao } from '../../nucleo/auth/sessao';
 import { BancoService } from '../../nucleo/banco.service';
 import { ARMAZENAMENTO } from '../../nucleo/tokens';
 
-export const MIMES_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
+export const MIMES_PERMITIDOS = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'application/pdf',
+];
 export const TAMANHO_MAXIMO = 10 * 1024 * 1024;
 
 @Injectable()
@@ -35,7 +41,11 @@ export class ArquivosService {
     arquivo: { buffer: Buffer; mimetype: string; originalname?: string; size: number },
   ) {
     if (!MIMES_PERMITIDOS.includes(arquivo.mimetype)) {
-      throw new ErroDominio('tipo_arquivo_invalido', 'Envie uma foto (JPG, PNG, WEBP) ou um PDF', 'validacao');
+      throw new ErroDominio(
+        'tipo_arquivo_invalido',
+        'Envie uma foto (JPG, PNG, WEBP) ou um PDF',
+        'validacao',
+      );
     }
     if (arquivo.size > TAMANHO_MAXIMO) {
       throw new ErroDominio('arquivo_grande', 'O arquivo deve ter no máximo 10 MB', 'validacao');
@@ -113,7 +123,14 @@ export class ArquivosService {
           .where(
             and(
               eq(alunos.selfieArquivoId, arquivoId),
-              inArray(aulas.status, ['solicitada', 'confirmada', 'a_caminho', 'em_andamento', 'aguardando_confirmacao', 'concluida']),
+              inArray(aulas.status, [
+                'solicitada',
+                'confirmada',
+                'a_caminho',
+                'em_andamento',
+                'aguardando_confirmacao',
+                'concluida',
+              ]),
             ),
           )
           .limit(1),
@@ -148,7 +165,18 @@ export class ArquivosService {
     const [a] = await this.banco.db
       .select({ id: arquivos.id })
       .from(arquivos)
-      .where(and(eq(arquivos.id, arquivoId), eq(arquivos.donoUsuarioId, usuarioId), sql`${arquivos.excluidoEm} is null`));
-    if (!a) throw new ErroDominio('arquivo_invalido', 'Arquivo não encontrado. Envie novamente.', 'validacao');
+      .where(
+        and(
+          eq(arquivos.id, arquivoId),
+          eq(arquivos.donoUsuarioId, usuarioId),
+          sql`${arquivos.excluidoEm} is null`,
+        ),
+      );
+    if (!a)
+      throw new ErroDominio(
+        'arquivo_invalido',
+        'Arquivo não encontrado. Envie novamente.',
+        'validacao',
+      );
   }
 }

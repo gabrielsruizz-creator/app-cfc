@@ -28,7 +28,11 @@ export default function CompletarAluno() {
     try {
       const selfieArquivoId = await enviarArquivo(selfie, 'selfie');
       await api('/aluno/perfil', {
-        corpo: { categoriaDesejada: categoria, renach: renach.trim() || undefined, selfieArquivoId },
+        corpo: {
+          categoriaDesejada: categoria,
+          renach: renach.trim() || undefined,
+          selfieArquivoId,
+        },
       });
       await recarregar();
       router.replace('/inicio');
@@ -67,18 +71,45 @@ export default function CompletarAluno() {
       />
       <Coluna>
         <Texto tipo="subtitulo">Selfie de identificação</Texto>
-        <Texto tipo="suave">O instrutor verá sua foto para reconhecer você no ponto de encontro.</Texto>
+        <Texto tipo="suave">
+          O instrutor verá sua foto para reconhecer você no ponto de encontro.
+        </Texto>
         <View style={{ alignItems: 'center', paddingVertical: 8 }}>
           {selfie ? (
-            <Image source={{ uri: selfie }} style={{ width: 160, height: 160, borderRadius: raio.pilula }} accessibilityLabel="Sua selfie" />
+            <Image
+              source={{ uri: selfie }}
+              style={{ width: 160, height: 160, borderRadius: raio.pilula }}
+              accessibilityLabel="Sua selfie"
+            />
           ) : (
-            <View style={{ width: 160, height: 160, borderRadius: raio.pilula, borderWidth: 2, borderStyle: 'dashed', borderColor: cores.borda }} />
+            <View
+              style={{
+                width: 160,
+                height: 160,
+                borderRadius: raio.pilula,
+                borderWidth: 2,
+                borderStyle: 'dashed',
+                borderColor: cores.borda,
+              }}
+            />
           )}
         </View>
-        <Botao titulo={selfie ? 'Tirar outra' : 'Tirar selfie'} variante="secundario" icone="camera" aoPressionar={async () => setSelfie((await escolherImagem('camera', true)) ?? selfie)} />
+        <Botao
+          titulo={selfie ? 'Tirar outra' : 'Tirar selfie'}
+          variante="secundario"
+          icone="camera"
+          aoPressionar={async () => setSelfie((await escolherImagem('camera', true)) ?? selfie)}
+        />
       </Coluna>
       <Botao titulo="Concluir cadastro" aoPressionar={concluir} carregando={enviando} />
-      <Botao titulo="Sair" variante="texto" aoPressionar={async () => { await sair(); router.replace('/boas-vindas'); }} />
+      <Botao
+        titulo="Sair"
+        variante="texto"
+        aoPressionar={async () => {
+          await sair();
+          router.replace('/boas-vindas');
+        }}
+      />
     </Tela>
   );
 }

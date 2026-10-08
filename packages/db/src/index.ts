@@ -5,7 +5,24 @@ export * from './outbox';
 export * from './auditoria';
 export * from './migrar';
 export * from './configuracoes';
-export { sql, eq, and, or, not, inArray, isNull, isNotNull, desc, asc, gt, gte, lt, lte, ne, count } from 'drizzle-orm';
+export {
+  sql,
+  eq,
+  and,
+  or,
+  not,
+  inArray,
+  isNull,
+  isNotNull,
+  desc,
+  asc,
+  gt,
+  gte,
+  lt,
+  lte,
+  ne,
+  count,
+} from 'drizzle-orm';
 export * from './teste';
 export * from './semente';
 export * from './fabricas';

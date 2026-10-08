@@ -43,16 +43,32 @@ export class IdentidadeService {
         .select({ email: usuarios.email, cpf: usuarios.cpf, telefone: usuarios.telefone })
         .from(usuarios)
         .where(
-          or(eq(usuarios.email, dados.email), eq(usuarios.cpf, dados.cpf), eq(usuarios.telefone, dados.telefone)),
+          or(
+            eq(usuarios.email, dados.email),
+            eq(usuarios.cpf, dados.cpf),
+            eq(usuarios.telefone, dados.telefone),
+          ),
         );
       if (conflitos.some((c) => c.cpf === dados.cpf)) {
-        throw new ErroDominio('cpf_em_uso', 'Já existe uma conta com este CPF. Tente entrar.', 'conflito');
+        throw new ErroDominio(
+          'cpf_em_uso',
+          'Já existe uma conta com este CPF. Tente entrar.',
+          'conflito',
+        );
       }
       if (conflitos.some((c) => c.email === dados.email)) {
-        throw new ErroDominio('email_em_uso', 'Já existe uma conta com este e-mail. Tente entrar.', 'conflito');
+        throw new ErroDominio(
+          'email_em_uso',
+          'Já existe uma conta com este e-mail. Tente entrar.',
+          'conflito',
+        );
       }
       if (conflitos.length) {
-        throw new ErroDominio('telefone_em_uso', 'Este telefone já está em uso em outra conta.', 'conflito');
+        throw new ErroDominio(
+          'telefone_em_uso',
+          'Este telefone já está em uso em outra conta.',
+          'conflito',
+        );
       }
       const [u] = await tx
         .insert(usuarios)
@@ -84,7 +100,10 @@ export class IdentidadeService {
     marketing: boolean,
     origem: Origem,
   ) {
-    const vigentes = await tx.select().from(documentosLegais).where(eq(documentosLegais.vigente, true));
+    const vigentes = await tx
+      .select()
+      .from(documentosLegais)
+      .where(eq(documentosLegais.vigente, true));
     for (const tipo of ['termos_uso', 'politica_privacidade'] as const) {
       const doc = vigentes.find((d) => d.tipo === tipo);
       await tx.insert(consentimentos).values({
@@ -110,9 +129,14 @@ export class IdentidadeService {
     const cpf = login.replace(/\D/g, '');
     const filtro = login.includes('@') ? eq(usuarios.email, login) : eq(usuarios.cpf, cpf);
     const [usuario] = await this.banco.db.select().from(usuarios).where(filtro);
-    const senhaOk = await verify(usuario?.senhaHash ?? (await HASH_FICTICIO()), dados.senha).catch(() => false);
+    const senhaOk = await verify(usuario?.senhaHash ?? (await HASH_FICTICIO()), dados.senha).catch(
+      () => false,
+    );
     if (!usuario || !senhaOk) {
-      throw new UnauthorizedException({ codigo: 'credenciais_invalidas', mensagem: 'E-mail/CPF ou senha incorretos' });
+      throw new UnauthorizedException({
+        codigo: 'credenciais_invalidas',
+        mensagem: 'E-mail/CPF ou senha incorretos',
+      });
     }
     if (usuario.status !== 'ativo') {
       throw new UnauthorizedException({
@@ -120,7 +144,10 @@ export class IdentidadeService {
         mensagem: 'Sua conta está bloqueada ou foi excluída. Fale com o suporte.',
       });
     }
-    await this.banco.db.update(usuarios).set({ ultimoAcessoEm: new Date() }).where(eq(usuarios.id, usuario.id));
+    await this.banco.db
+      .update(usuarios)
+      .set({ ultimoAcessoEm: new Date() })
+      .where(eq(usuarios.id, usuario.id));
     return this.abrirSessao(usuario.id, { ...origem, dispositivo: dados.dispositivo });
   }
 
@@ -140,7 +167,11 @@ export class IdentidadeService {
       .returning();
     const acesso = await this.tokens.emitirAcesso(usuarioId, sessao!.id);
     return {
-      tokens: { accessToken: acesso.token, refreshToken: refresh.token, expiraEm: acesso.expiraEm.toISOString() },
+      tokens: {
+        accessToken: acesso.token,
+        refreshToken: refresh.token,
+        expiraEm: acesso.expiraEm.toISOString(),
+      },
       eu: await this.eu(usuarioId),
     };
   }
@@ -148,23 +179,46 @@ export class IdentidadeService {
   /** Troca o refresh token por um novo par. Reuso de token já trocado revoga todas as sessões da família. */
   async renovar(refreshToken: string, origem: Origem): Promise<RespostaSessao> {
     const hashToken = TokensService.hash(refreshToken);
-    const [sessao] = await this.banco.db.select().from(sessoes).where(eq(sessoes.refreshTokenHash, hashToken));
-    const invalido = new UnauthorizedException({ codigo: 'sessao_expirada', mensagem: 'Sua sessão expirou. Entre novamente.' });
+    const [sessao] = await this.banco.db
+      .select()
+      .from(sessoes)
+      .where(eq(sessoes.refreshTokenHash, hashToken));
+    const invalido = new UnauthorizedException({
+      codigo: 'sessao_expirada',
+      mensagem: 'Sua sessão expirou. Entre novamente.',
+    });
     if (!sessao) throw invalido;
     if (sessao.revogadaEm) {
-      await this.banco.db.update(sessoes).set({ revogadaEm: new Date() }).where(eq(sessoes.familia, sessao.familia));
+      await this.banco.db
+        .update(sessoes)
+        .set({ revogadaEm: new Date() })
+        .where(eq(sessoes.familia, sessao.familia));
       throw invalido;
     }
     if (sessao.expiraEm < new Date()) throw invalido;
-    const [usuario] = await this.banco.db.select().from(usuarios).where(eq(usuarios.id, sessao.usuarioId));
+    const [usuario] = await this.banco.db
+      .select()
+      .from(usuarios)
+      .where(eq(usuarios.id, sessao.usuarioId));
     if (!usuario || usuario.status !== 'ativo') throw invalido;
-    await this.banco.db.update(sessoes).set({ revogadaEm: new Date() }).where(eq(sessoes.id, sessao.id));
-    return this.abrirSessao(sessao.usuarioId, { ...origem, dispositivo: sessao.dispositivo }, sessao.familia);
+    await this.banco.db
+      .update(sessoes)
+      .set({ revogadaEm: new Date() })
+      .where(eq(sessoes.id, sessao.id));
+    return this.abrirSessao(
+      sessao.usuarioId,
+      { ...origem, dispositivo: sessao.dispositivo },
+      sessao.familia,
+    );
   }
 
   async sair(sessaoId: string) {
     const [s] = await this.banco.db.select().from(sessoes).where(eq(sessoes.id, sessaoId));
-    if (s) await this.banco.db.update(sessoes).set({ revogadaEm: new Date() }).where(eq(sessoes.familia, s.familia));
+    if (s)
+      await this.banco.db
+        .update(sessoes)
+        .set({ revogadaEm: new Date() })
+        .where(eq(sessoes.familia, s.familia));
   }
 
   async eu(usuarioId: string): Promise<Eu> {
@@ -176,7 +230,10 @@ export class IdentidadeService {
       .select({ id: instrutores.id, status: instrutores.status })
       .from(instrutores)
       .where(eq(instrutores.usuarioId, usuarioId));
-    const [admin] = await db.select().from(adminsPlataforma).where(eq(adminsPlataforma.usuarioId, usuarioId));
+    const [admin] = await db
+      .select()
+      .from(adminsPlataforma)
+      .where(eq(adminsPlataforma.usuarioId, usuarioId));
     const vinculos = await this.banco.comAtor({ tipo: 'anonimo', usuarioId }, (tx) =>
       tx
         .select({
@@ -187,7 +244,9 @@ export class IdentidadeService {
         })
         .from(autoescolaMembros)
         .innerJoin(autoescolas, eq(autoescolas.id, autoescolaMembros.autoescolaId))
-        .where(and(eq(autoescolaMembros.usuarioId, usuarioId), eq(autoescolaMembros.status, 'ativo'))),
+        .where(
+          and(eq(autoescolaMembros.usuarioId, usuarioId), eq(autoescolaMembros.status, 'ativo')),
+        ),
     );
     return {
       id: u.id,
@@ -198,7 +257,11 @@ export class IdentidadeService {
       genero: (u.genero as Eu['genero']) ?? null,
       fotoArquivoId: u.fotoArquivoId,
       aluno: aluno
-        ? { id: aluno.id, categoriaDesejada: aluno.categoriaDesejada as never, renach: aluno.renach }
+        ? {
+            id: aluno.id,
+            categoriaDesejada: aluno.categoriaDesejada as never,
+            renach: aluno.renach,
+          }
         : null,
       instrutor: instrutor ? { id: instrutor.id, status: instrutor.status as never } : null,
       autoescolas: vinculos as Eu['autoescolas'],

@@ -1,4 +1,10 @@
-import { CATEGORIAS_CNH, GATEWAYS, STATUS_ATENDIMENTO, STATUS_COBRANCA, STATUS_PEDIDO } from '@volante/contracts';
+import {
+  CATEGORIAS_CNH,
+  GATEWAYS,
+  STATUS_ATENDIMENTO,
+  STATUS_COBRANCA,
+  STATUS_PEDIDO,
+} from '@volante/contracts';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -240,7 +246,13 @@ export const creditosMovimentos = pgTable(
     criadoEm: criadoEm(),
   },
   (t) => [
-    checkValores('creditos_mov_tipo_ck', t.tipo, ['reserva', 'consumo', 'devolucao', 'estorno', 'expiracao']),
+    checkValores('creditos_mov_tipo_ck', t.tipo, [
+      'reserva',
+      'consumo',
+      'devolucao',
+      'estorno',
+      'expiracao',
+    ]),
     index('creditos_mov_credito_idx').on(t.creditoId),
   ],
 );
@@ -355,7 +367,12 @@ export const contasFinanceiras = pgTable(
     criadoEm: criadoEm(),
   },
   (t) => [
-    checkValores('contas_titular_ck', t.titularTipo, ['plataforma', 'externa', 'instrutor', 'autoescola']),
+    checkValores('contas_titular_ck', t.titularTipo, [
+      'plataforma',
+      'externa',
+      'instrutor',
+      'autoescola',
+    ]),
     uniqueIndex('contas_instrutor_uk').on(t.instrutorId),
     uniqueIndex('contas_autoescola_uk').on(t.autoescolaId),
     uniqueIndex('contas_sistema_uk')
@@ -449,7 +466,10 @@ export const recibos = pgTable(
     arquivoId: uuid().references(() => arquivos.id),
     emitidoEm: instanteTz().defaultNow().notNull(),
   },
-  (t) => [uniqueIndex('recibos_pedido_uk').on(t.pedidoId), uniqueIndex('recibos_numero_uk').on(t.numero)],
+  (t) => [
+    uniqueIndex('recibos_pedido_uk').on(t.pedidoId),
+    uniqueIndex('recibos_numero_uk').on(t.numero),
+  ],
 );
 
 /** Estrutura pronta para nota fiscal; emissão real depende de um adaptador (hoje: NaoConfigurado). */

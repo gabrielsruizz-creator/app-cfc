@@ -12,7 +12,12 @@ export function SeletorTema() {
   return (
     <Linha style={{ flexWrap: 'wrap' }}>
       {OPCOES.map((o) => (
-        <Chip key={o.valor} rotulo={o.rotulo} selecionado={preferencia === o.valor} aoPressionar={() => definirPreferencia(o.valor)} />
+        <Chip
+          key={o.valor}
+          rotulo={o.rotulo}
+          selecionado={preferencia === o.valor}
+          aoPressionar={() => definirPreferencia(o.valor)}
+        />
       ))}
     </Linha>
   );

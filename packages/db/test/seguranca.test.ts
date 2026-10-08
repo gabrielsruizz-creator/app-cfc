@@ -111,9 +111,13 @@ describe('isolamento entre autoescolas (RLS)', () => {
     const arquivo = await fabricarArquivo(banco.db, aluno.usuarioId, 'documento');
     await expect(
       comAtor(banco.db, atorA, (tx) =>
-        tx.insert(autoescolaDocumentos).values({ autoescolaId: b.id, tipo: 'alvara', arquivoId: arquivo.id }),
+        tx
+          .insert(autoescolaDocumentos)
+          .values({ autoescolaId: b.id, tipo: 'alvara', arquivoId: arquivo.id }),
       ),
-    ).rejects.toSatisfy((e: { cause?: Error }) => /row-level security/.test(e.cause?.message ?? ''));
+    ).rejects.toSatisfy((e: { cause?: Error }) =>
+      /row-level security/.test(e.cause?.message ?? ''),
+    );
   });
 
   it('o aluno só vê os próprios pedidos', async () => {
@@ -206,7 +210,12 @@ describe('agenda sem conflito', () => {
     const p1 = await prepararAula(instrutor.id, aluno1.id, inicio);
     const p2 = await prepararAula(instrutor.id, aluno2.id, inicio);
 
-    const inserir = (alunoId: string, pedidoId: string, creditoId: string, deslocamentoMin: number) =>
+    const inserir = (
+      alunoId: string,
+      pedidoId: string,
+      creditoId: string,
+      deslocamentoMin: number,
+    ) =>
       comAtor(banco.db, ATOR_SISTEMA, (tx) =>
         tx.insert(aulas).values({
           alunoId,
@@ -257,13 +266,18 @@ describe('agenda sem conflito', () => {
       politicaCancelamento: { gratisAteHoras: 24, multaBp: 5000 },
     };
     await comAtor(banco.db, ATOR_SISTEMA, (tx) =>
-      tx.insert(aulas).values({ ...base, pedidoId: p1.pedido.id, creditoId: p1.credito.id, status: 'cancelada' }),
+      tx
+        .insert(aulas)
+        .values({ ...base, pedidoId: p1.pedido.id, creditoId: p1.credito.id, status: 'cancelada' }),
     );
     await expect(
       comAtor(banco.db, ATOR_SISTEMA, (tx) =>
-        tx
-          .insert(aulas)
-          .values({ ...base, pedidoId: p2.pedido.id, creditoId: p2.credito.id, status: 'solicitada' }),
+        tx.insert(aulas).values({
+          ...base,
+          pedidoId: p2.pedido.id,
+          creditoId: p2.credito.id,
+          status: 'solicitada',
+        }),
       ),
     ).resolves.toBeDefined();
   });
@@ -293,7 +307,10 @@ describe('auditoria imutável', () => {
 
   it('lançamentos financeiros não podem ser alterados', async () => {
     const conta = await comAtor(banco.db, ATOR_SISTEMA, async (tx) => {
-      const [c] = await tx.select().from(contasFinanceiras).where(eq(contasFinanceiras.titularTipo, 'plataforma'));
+      const [c] = await tx
+        .select()
+        .from(contasFinanceiras)
+        .where(eq(contasFinanceiras.titularTipo, 'plataforma'));
       const [l] = await tx
         .insert(lancamentos)
         .values({

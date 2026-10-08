@@ -72,11 +72,15 @@ export class AutoescolasService {
         uf: d.uf,
         localizacao: d.localizacao,
       });
-      await tx.insert(autoescolaMembros).values({ autoescolaId: id, usuarioId: sessao.usuarioId, papel: 'dono' });
+      await tx
+        .insert(autoescolaMembros)
+        .values({ autoescolaId: id, usuarioId: sessao.usuarioId, papel: 'dono' });
       const [termo] = await tx
         .select()
         .from(documentosLegais)
-        .where(and(eq(documentosLegais.tipo, 'termo_autoescola'), eq(documentosLegais.vigente, true)));
+        .where(
+          and(eq(documentosLegais.tipo, 'termo_autoescola'), eq(documentosLegais.vigente, true)),
+        );
       await tx.insert(consentimentos).values({
         usuarioId: sessao.usuarioId,
         documentoLegalId: termo?.id ?? null,
@@ -96,12 +100,18 @@ export class AutoescolasService {
       const docs = await tx
         .select()
         .from(autoescolaDocumentos)
-        .where(and(eq(autoescolaDocumentos.autoescolaId, a.id), ne(autoescolaDocumentos.status, 'substituido')))
+        .where(
+          and(
+            eq(autoescolaDocumentos.autoescolaId, a.id),
+            ne(autoescolaDocumentos.status, 'substituido'),
+          ),
+        )
         .orderBy(desc(autoescolaDocumentos.criadoEm));
       const pendencias = TIPOS_DOCUMENTO_AUTOESCOLA.flatMap((tipo) => {
         const doc = docs.find((x) => x.tipo === tipo);
         if (!doc) return [`Envie: ${NOMES[tipo]}`];
-        if (doc.status === 'reprovado') return [`Reenvie: ${NOMES[tipo]} (${doc.motivoReprovacao ?? 'reprovado'})`];
+        if (doc.status === 'reprovado')
+          return [`Reenvie: ${NOMES[tipo]} (${doc.motivoReprovacao ?? 'reprovado'})`];
         return [];
       });
       return {
@@ -147,12 +157,21 @@ export class AutoescolasService {
   async enviarParaAnalise(ator: Ator) {
     const p = await this.painel(ator);
     if (!['rascunho', 'reprovada'].includes(p.autoescola.status)) {
-      throw new ErroDominio('status_invalido', 'O cadastro já foi enviado para análise', 'conflito');
+      throw new ErroDominio(
+        'status_invalido',
+        'O cadastro já foi enviado para análise',
+        'conflito',
+      );
     }
     if (p.pendencias.length) {
-      throw new ErroDominio('cadastro_incompleto', 'Envie todos os documentos antes de prosseguir', 'validacao', {
-        pendencias: p.pendencias,
-      });
+      throw new ErroDominio(
+        'cadastro_incompleto',
+        'Envie todos os documentos antes de prosseguir',
+        'validacao',
+        {
+          pendencias: p.pendencias,
+        },
+      );
     }
     await this.banco.comAtor(ator, async (tx) => {
       await tx
@@ -173,7 +192,10 @@ export class AutoescolasService {
   /** Integrações disponíveis. O CFC Plus aparece como "em breve" até a Fase 4. */
   async integracoes(ator: Ator): Promise<IntegracaoDisponivel[]> {
     const linhas = await this.banco.comAtor(ator, (tx) =>
-      tx.select().from(integracoesAutoescola).where(eq(integracoesAutoescola.autoescolaId, ator.autoescolaId!)),
+      tx
+        .select()
+        .from(integracoesAutoescola)
+        .where(eq(integracoesAutoescola.autoescolaId, ator.autoescolaId!)),
     );
     const cfcPlus = linhas.find((l) => l.sistema === 'cfc_plus');
     return [
@@ -182,7 +204,10 @@ export class AutoescolasService {
         nome: 'CFC Plus',
         descricao:
           'Envie automaticamente os alunos e pedidos do app para o seu ERP de autoescola: matrícula, agenda e financeiro sem digitação.',
-        status: cfcPlus && cfcPlus.status !== 'nao_conectada' ? (cfcPlus.status as IntegracaoDisponivel['status']) : 'em_breve',
+        status:
+          cfcPlus && cfcPlus.status !== 'nao_conectada'
+            ? (cfcPlus.status as IntegracaoDisponivel['status'])
+            : 'em_breve',
       },
     ];
   }

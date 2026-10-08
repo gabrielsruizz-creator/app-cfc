@@ -1,3 +1,6 @@
+import { carregarEnv } from './carregar-env';
+carregarEnv();
+
 import { migrar } from '../migrar';
 
 const url = process.env.DATABASE_URL;

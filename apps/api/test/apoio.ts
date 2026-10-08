@@ -9,7 +9,11 @@ import { AppModule } from '../src/app.module';
 import { CONFIG, lerConfig } from '../src/config';
 import { configurarApp } from '../src/configurar-app';
 
-export type Contexto = { app: INestApplication; banco: BancoTeste; http: () => ReturnType<typeof request> };
+export type Contexto = {
+  app: INestApplication;
+  banco: BancoTeste;
+  http: () => ReturnType<typeof request>;
+};
 
 export async function iniciarApp(): Promise<Contexto> {
   const banco = await criarBancoTeste();
@@ -60,7 +64,11 @@ export async function cadastrar(ctx: Contexto, nome = 'Pessoa') {
       aceitouPrivacidade: true,
     })
     .expect(201);
-  return { token: r.body.tokens.accessToken as string, refresh: r.body.tokens.refreshToken as string, eu: r.body.eu };
+  return {
+    token: r.body.tokens.accessToken as string,
+    refresh: r.body.tokens.refreshToken as string,
+    eu: r.body.eu,
+  };
 }
 
 export const PNG_1PX = Buffer.from(

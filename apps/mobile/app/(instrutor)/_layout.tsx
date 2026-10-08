@@ -26,9 +26,15 @@ export default function AbasInstrutor() {
       }}
     >
       <Tabs.Screen name="agenda" options={{ title: 'Agenda', tabBarIcon: icone('calendar') }} />
-      <Tabs.Screen name="solicitacoes" options={{ title: 'Solicitações', tabBarIcon: icone('mail-unread') }} />
+      <Tabs.Screen
+        name="solicitacoes"
+        options={{ title: 'Solicitações', tabBarIcon: icone('mail-unread') }}
+      />
       <Tabs.Screen name="alunos" options={{ title: 'Alunos', tabBarIcon: icone('people') }} />
-      <Tabs.Screen name="painel" options={{ title: 'Perfil', tabBarIcon: icone('person-circle') }} />
+      <Tabs.Screen
+        name="painel"
+        options={{ title: 'Perfil', tabBarIcon: icone('person-circle') }}
+      />
     </Tabs>
   );
 }

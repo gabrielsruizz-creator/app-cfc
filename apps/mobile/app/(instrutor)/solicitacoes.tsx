@@ -22,13 +22,20 @@ export default function Solicitacoes() {
   const queryClient = useQueryClient();
   const [erro, setErro] = useState<string | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
-  const q = useQuery({ queryKey: ['instrutor', 'solicitacoes'], queryFn: () => api<AulaResumo[]>('/instrutor/solicitacoes'), refetchInterval: 30000 });
+  const q = useQuery({
+    queryKey: ['instrutor', 'solicitacoes'],
+    queryFn: () => api<AulaResumo[]>('/instrutor/solicitacoes'),
+    refetchInterval: 30000,
+  });
 
   async function responder(a: AulaResumo, aceitar: boolean, motivo?: string) {
     setErro(null);
     setProcessando(a.id);
     try {
-      await api(`/instrutor/aulas/${a.id}/${aceitar ? 'aceitar' : 'recusar'}`, aceitar ? { metodo: 'POST' } : { corpo: { motivo } });
+      await api(
+        `/instrutor/aulas/${a.id}/${aceitar ? 'aceitar' : 'recusar'}`,
+        aceitar ? { metodo: 'POST' } : { corpo: { motivo } },
+      );
       await queryClient.invalidateQueries({ queryKey: ['instrutor'] });
     } catch (e) {
       setErro(mensagemDeErro(e));
@@ -40,7 +47,10 @@ export default function Solicitacoes() {
   function recusar(a: AulaResumo) {
     Alert.alert('Recusar aula?', 'O aluno recebe o valor de volta. Escolha o motivo:', [
       { text: 'Horário indisponível', onPress: () => responder(a, false, 'Horário indisponível') },
-      { text: 'Local fora da minha região', onPress: () => responder(a, false, 'Local fora da região de atendimento') },
+      {
+        text: 'Local fora da minha região',
+        onPress: () => responder(a, false, 'Local fora da região de atendimento'),
+      },
       { text: 'Voltar', style: 'cancel' },
     ]);
   }
@@ -64,16 +74,31 @@ export default function Solicitacoes() {
             {a.aceiteAte && <Texto tipo="pequeno">Responda até {dataHora(a.aceiteAte)}</Texto>}
             <Linha>
               <Coluna style={{ flex: 1 }}>
-                <Botao titulo="Recusar" variante="perigo" compacto desabilitado={processando === a.id} aoPressionar={() => recusar(a)} />
+                <Botao
+                  titulo="Recusar"
+                  variante="perigo"
+                  compacto
+                  desabilitado={processando === a.id}
+                  aoPressionar={() => recusar(a)}
+                />
               </Coluna>
               <Coluna style={{ flex: 1 }}>
-                <Botao titulo="Aceitar" compacto carregando={processando === a.id} aoPressionar={() => responder(a, true)} />
+                <Botao
+                  titulo="Aceitar"
+                  compacto
+                  carregando={processando === a.id}
+                  aoPressionar={() => responder(a, true)}
+                />
               </Coluna>
             </Linha>
           </Cartao>
         ))
       ) : (
-        <Vazio icone="mail-open-outline" titulo="Nenhuma solicitação pendente" texto="Quando um aluno agendar com você, a solicitação aparece aqui." />
+        <Vazio
+          icone="mail-open-outline"
+          titulo="Nenhuma solicitação pendente"
+          texto="Quando um aluno agendar com você, a solicitação aparece aqui."
+        />
       )}
     </Tela>
   );

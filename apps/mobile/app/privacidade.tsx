@@ -2,7 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Share } from 'react-native';
-import { Aviso, Botao, Cartao, Carregando, Divisor, Interruptor, ItemLista, Tela, Texto } from '../src/componentes/ui';
+import {
+  Aviso,
+  Botao,
+  Cartao,
+  Carregando,
+  Divisor,
+  Interruptor,
+  ItemLista,
+  Tela,
+  Texto,
+} from '../src/componentes/ui';
 import { api, ErroApi, mensagemDeErro } from '../src/servicos/api';
 import { useAuth } from '../src/servicos/AuthProvider';
 
@@ -11,7 +21,10 @@ type Consentimento = { finalidade: string; aceito: boolean; registradoEm: string
 export default function Privacidade() {
   const { sair } = useAuth();
   const [erro, setErro] = useState<string | null>(null);
-  const q = useQuery({ queryKey: ['consentimentos'], queryFn: () => api<Consentimento[]>('/privacidade/consentimentos') });
+  const q = useQuery({
+    queryKey: ['consentimentos'],
+    queryFn: () => api<Consentimento[]>('/privacidade/consentimentos'),
+  });
   const aceito = (f: string) => q.data?.find((c) => c.finalidade === f)?.aceito ?? false;
 
   async function alternar(finalidade: string, valor: boolean) {
@@ -47,7 +60,10 @@ export default function Privacidade() {
               await sair();
               router.replace('/boas-vindas');
             } catch (e) {
-              const pend = e instanceof ErroApi ? (e.detalhes as { pendencias?: string[] } | undefined)?.pendencias : undefined;
+              const pend =
+                e instanceof ErroApi
+                  ? (e.detalhes as { pendencias?: string[] } | undefined)?.pendencias
+                  : undefined;
               setErro(pend?.length ? `${mensagemDeErro(e)}: ${pend.join(' ')}` : mensagemDeErro(e));
             }
           },
@@ -62,21 +78,47 @@ export default function Privacidade() {
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       <Cartao>
         <Texto tipo="rotulo">Consentimentos</Texto>
-        <Interruptor rotulo="Novidades e promoções" descricao="Receber ofertas por e-mail e notificação" ligado={aceito('marketing')} aoMudar={(v) => alternar('marketing', v)} />
+        <Interruptor
+          rotulo="Novidades e promoções"
+          descricao="Receber ofertas por e-mail e notificação"
+          ligado={aceito('marketing')}
+          aoMudar={(v) => alternar('marketing', v)}
+        />
         <Divisor />
-        <ItemLista icone="document-text" titulo="Termos de uso" descricao="Aceito no cadastro" aoPressionar={() => router.push('/documento-legal/termos_uso')} />
-        <ItemLista icone="lock-closed" titulo="Política de privacidade" descricao="Aceita no cadastro" aoPressionar={() => router.push('/documento-legal/politica_privacidade')} />
+        <ItemLista
+          icone="document-text"
+          titulo="Termos de uso"
+          descricao="Aceito no cadastro"
+          aoPressionar={() => router.push('/documento-legal/termos_uso')}
+        />
+        <ItemLista
+          icone="lock-closed"
+          titulo="Política de privacidade"
+          descricao="Aceita no cadastro"
+          aoPressionar={() => router.push('/documento-legal/politica_privacidade')}
+        />
       </Cartao>
       <Cartao>
         <Texto tipo="rotulo">Localização</Texto>
         <Texto tipo="suave">
-          Usamos sua localização para encontrar instrutores e confirmar o check-in. A localização do instrutor só é compartilhada durante a aula.
+          Usamos sua localização para encontrar instrutores e confirmar o check-in. A localização do
+          instrutor só é compartilhada durante a aula.
         </Texto>
       </Cartao>
       <Cartao>
         <Texto tipo="rotulo">Seus dados</Texto>
-        <Botao titulo="Baixar meus dados" variante="secundario" icone="download" aoPressionar={exportar} />
-        <Botao titulo="Excluir minha conta" variante="perigo" icone="trash" aoPressionar={excluir} />
+        <Botao
+          titulo="Baixar meus dados"
+          variante="secundario"
+          icone="download"
+          aoPressionar={exportar}
+        />
+        <Botao
+          titulo="Excluir minha conta"
+          variante="perigo"
+          icone="trash"
+          aoPressionar={excluir}
+        />
       </Cartao>
     </Tela>
   );

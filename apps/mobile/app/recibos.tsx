@@ -5,7 +5,10 @@ import { api } from '../src/servicos/api';
 import { dataHora, formatarCentavos } from '../src/util/formatos';
 
 export default function Recibos() {
-  const q = useQuery({ queryKey: ['aluno', 'recibos'], queryFn: () => api<Recibo[]>('/aluno/recibos') });
+  const q = useQuery({
+    queryKey: ['aluno', 'recibos'],
+    queryFn: () => api<Recibo[]>('/aluno/recibos'),
+  });
   if (q.isLoading) return <Carregando />;
   return (
     <Tela aoAtualizar={() => void q.refetch()} atualizando={q.isRefetching}>
@@ -27,7 +30,11 @@ export default function Recibos() {
           </Cartao>
         ))
       ) : (
-        <Vazio icone="receipt-outline" titulo="Nenhum recibo ainda" texto="Os recibos aparecem aqui depois de cada pagamento." />
+        <Vazio
+          icone="receipt-outline"
+          titulo="Nenhum recibo ainda"
+          texto="Os recibos aparecem aqui depois de cada pagamento."
+        />
       )}
     </Tela>
   );

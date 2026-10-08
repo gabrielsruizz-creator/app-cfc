@@ -49,7 +49,10 @@ export class InstrutoresService {
   ) {}
 
   private async carregar(instrutorId: string) {
-    const [i] = await this.banco.db.select().from(instrutores).where(eq(instrutores.id, instrutorId));
+    const [i] = await this.banco.db
+      .select()
+      .from(instrutores)
+      .where(eq(instrutores.id, instrutorId));
     if (!i) throw naoEncontrado('instrutor');
     return i;
   }
@@ -58,8 +61,15 @@ export class InstrutoresService {
     if (sessao.instrutorId) {
       throw new ErroDominio('perfil_existente', 'Você já tem um cadastro de instrutor', 'conflito');
     }
-    const [u] = await this.banco.db.select().from(usuarios).where(eq(usuarios.id, sessao.usuarioId));
-    if (!u?.cpf) throw new ErroDominio('cpf_obrigatorio', 'Informe seu CPF antes de se cadastrar como instrutor');
+    const [u] = await this.banco.db
+      .select()
+      .from(usuarios)
+      .where(eq(usuarios.id, sessao.usuarioId));
+    if (!u?.cpf)
+      throw new ErroDominio(
+        'cpf_obrigatorio',
+        'Informe seu CPF antes de se cadastrar como instrutor',
+      );
     if (dados.fotoArquivoId) await this.definirFoto(sessao.usuarioId, dados.fotoArquivoId);
     const [i] = await this.banco.db
       .insert(instrutores)
@@ -75,7 +85,10 @@ export class InstrutoresService {
 
   private async definirFoto(usuarioId: string, arquivoId: string) {
     await this.arquivos.exigirDono(arquivoId, usuarioId);
-    await this.banco.db.update(usuarios).set({ fotoArquivoId: arquivoId }).where(eq(usuarios.id, usuarioId));
+    await this.banco.db
+      .update(usuarios)
+      .set({ fotoArquivoId: arquivoId })
+      .where(eq(usuarios.id, usuarioId));
   }
 
   async atualizarPerfil(sessao: Sessao, instrutorId: string, dados: PerfilProfissional) {
@@ -89,7 +102,11 @@ export class InstrutoresService {
 
   async atualizarAtendimento(ator: Ator, instrutorId: string, dados: Atendimento) {
     await this.banco.comAtor(ator, async (tx) => {
-      const [antes] = await tx.select().from(instrutores).where(eq(instrutores.id, instrutorId)).for('update');
+      const [antes] = await tx
+        .select()
+        .from(instrutores)
+        .where(eq(instrutores.id, instrutorId))
+        .for('update');
       await tx
         .update(instrutores)
         .set({
@@ -119,8 +136,16 @@ export class InstrutoresService {
 
   async enviarDocumento(sessao: Sessao, instrutorId: string, dados: EnviarDocumentoInstrutor) {
     await this.arquivos.exigirDono(dados.arquivoId, sessao.usuarioId);
-    if (dados.validade && DOCUMENTOS_COM_VALIDADE.includes(dados.tipo) && new Date(dados.validade) < new Date()) {
-      throw new ErroDominio('documento_vencido', 'Este documento está vencido. Envie um documento válido.', 'validacao');
+    if (
+      dados.validade &&
+      DOCUMENTOS_COM_VALIDADE.includes(dados.tipo) &&
+      new Date(dados.validade) < new Date()
+    ) {
+      throw new ErroDominio(
+        'documento_vencido',
+        'Este documento está vencido. Envie um documento válido.',
+        'validacao',
+      );
     }
     await this.banco.db.transaction(async (tx) => {
       await tx
@@ -200,24 +225,38 @@ export class InstrutoresService {
       .where(eq(disponibilidadesSemanais.instrutorId, instrutorId));
     return {
       faixas: faixas
-        .map((f) => ({ diaSemana: f.diaSemana, horaInicio: f.horaInicio.slice(0, 5), horaFim: f.horaFim.slice(0, 5) }))
+        .map((f) => ({
+          diaSemana: f.diaSemana,
+          horaInicio: f.horaInicio.slice(0, 5),
+          horaFim: f.horaFim.slice(0, 5),
+        }))
         .sort((a, b) => a.diaSemana - b.diaSemana || a.horaInicio.localeCompare(b.horaInicio)),
     };
   }
 
   async salvarJornada(instrutorId: string, dados: JornadaSemanal) {
     for (const dia of new Set(dados.faixas.map((f) => f.diaSemana))) {
-      const doDia = dados.faixas.filter((f) => f.diaSemana === dia).sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+      const doDia = dados.faixas
+        .filter((f) => f.diaSemana === dia)
+        .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
       for (let i = 1; i < doDia.length; i++) {
         if (doDia[i]!.horaInicio < doDia[i - 1]!.horaFim) {
-          throw new ErroDominio('faixas_sobrepostas', 'Há faixas de horário sobrepostas no mesmo dia', 'validacao');
+          throw new ErroDominio(
+            'faixas_sobrepostas',
+            'Há faixas de horário sobrepostas no mesmo dia',
+            'validacao',
+          );
         }
       }
     }
     await this.banco.db.transaction(async (tx) => {
-      await tx.delete(disponibilidadesSemanais).where(eq(disponibilidadesSemanais.instrutorId, instrutorId));
+      await tx
+        .delete(disponibilidadesSemanais)
+        .where(eq(disponibilidadesSemanais.instrutorId, instrutorId));
       if (dados.faixas.length) {
-        await tx.insert(disponibilidadesSemanais).values(dados.faixas.map((f) => ({ ...f, instrutorId })));
+        await tx
+          .insert(disponibilidadesSemanais)
+          .values(dados.faixas.map((f) => ({ ...f, instrutorId })));
       }
     });
     return this.jornada(instrutorId);
@@ -227,7 +266,9 @@ export class InstrutoresService {
     const linhas = await this.banco.db
       .select()
       .from(bloqueiosAgenda)
-      .where(and(eq(bloqueiosAgenda.instrutorId, instrutorId), gte(bloqueiosAgenda.fim, new Date())))
+      .where(
+        and(eq(bloqueiosAgenda.instrutorId, instrutorId), gte(bloqueiosAgenda.fim, new Date())),
+      )
       .orderBy(bloqueiosAgenda.inicio);
     return linhas.map((b) => ({
       id: b.id,
@@ -264,25 +305,39 @@ export class InstrutoresService {
         'Você poderá ficar disponível assim que seu cadastro for aprovado',
       );
     }
-    await this.banco.db.update(instrutores).set({ disponivel }).where(eq(instrutores.id, instrutorId));
+    await this.banco.db
+      .update(instrutores)
+      .set({ disponivel })
+      .where(eq(instrutores.id, instrutorId));
     return this.perfil(instrutorId);
   }
 
   async enviarParaAnalise(sessao: Sessao, instrutorId: string) {
     const perfil = await this.perfil(instrutorId);
     if (!['rascunho', 'reprovado'].includes(perfil.status)) {
-      throw new ErroDominio('status_invalido', 'Seu cadastro já foi enviado para análise', 'conflito');
+      throw new ErroDominio(
+        'status_invalido',
+        'Seu cadastro já foi enviado para análise',
+        'conflito',
+      );
     }
     if (perfil.pendenciasCadastro.length) {
-      throw new ErroDominio('cadastro_incompleto', 'Complete o cadastro antes de enviar', 'validacao', {
-        pendencias: perfil.pendenciasCadastro,
-      });
+      throw new ErroDominio(
+        'cadastro_incompleto',
+        'Complete o cadastro antes de enviar',
+        'validacao',
+        {
+          pendencias: perfil.pendenciasCadastro,
+        },
+      );
     }
     await this.banco.db.transaction(async (tx) => {
       const [termo] = await tx
         .select()
         .from(documentosLegais)
-        .where(and(eq(documentosLegais.tipo, 'termo_instrutor'), eq(documentosLegais.vigente, true)));
+        .where(
+          and(eq(documentosLegais.tipo, 'termo_instrutor'), eq(documentosLegais.vigente, true)),
+        );
       await tx.insert(consentimentos).values({
         usuarioId: sessao.usuarioId,
         documentoLegalId: termo?.id ?? null,
@@ -311,7 +366,12 @@ export class InstrutoresService {
     const docs = await this.banco.db
       .select()
       .from(instrutorDocumentos)
-      .where(and(eq(instrutorDocumentos.instrutorId, instrutorId), ne(instrutorDocumentos.status, 'substituido')))
+      .where(
+        and(
+          eq(instrutorDocumentos.instrutorId, instrutorId),
+          ne(instrutorDocumentos.status, 'substituido'),
+        ),
+      )
       .orderBy(desc(instrutorDocumentos.criadoEm));
     const vs = await this.banco.db
       .select()
@@ -328,7 +388,8 @@ export class InstrutoresService {
     for (const tipo of TIPOS_DOCUMENTO_INSTRUTOR) {
       const d = docs.find((x) => x.tipo === tipo);
       if (!d) pendencias.push(`Envie: ${NOMES_DOCUMENTO[tipo]}`);
-      else if (d.status === 'reprovado') pendencias.push(`Reenvie: ${NOMES_DOCUMENTO[tipo]} (${d.motivoReprovacao ?? 'reprovado'})`);
+      else if (d.status === 'reprovado')
+        pendencias.push(`Reenvie: ${NOMES_DOCUMENTO[tipo]} (${d.motivoReprovacao ?? 'reprovado'})`);
     }
     if (i.forneceVeiculo && !vs.length) pendencias.push('Cadastre o veículo usado nas aulas');
 

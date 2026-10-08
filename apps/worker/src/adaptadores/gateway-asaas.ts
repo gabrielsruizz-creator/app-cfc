@@ -27,8 +27,13 @@ export class GatewayAsaas implements GatewayPagamentoPort {
     private readonly http: Fetch = fetch,
   ) {}
 
-  private async chamar<T>(metodo: string, caminho: string, corpo?: unknown): Promise<ResultadoExterno<{ dados: T }>> {
-    if (!this.config.apiKey) return { status: 'pendente_configuracao', motivo: 'ASAAS_API_KEY não configurada' };
+  private async chamar<T>(
+    metodo: string,
+    caminho: string,
+    corpo?: unknown,
+  ): Promise<ResultadoExterno<{ dados: T }>> {
+    if (!this.config.apiKey)
+      return { status: 'pendente_configuracao', motivo: 'ASAAS_API_KEY não configurada' };
     try {
       const r = await this.http(`${this.config.url}${caminho}`, {
         method: metodo,
@@ -52,7 +57,8 @@ export class GatewayAsaas implements GatewayPagamentoPort {
   }
 
   async criarCobrancaPix(d: DadosCobrancaPix) {
-    if (!d.pagador.cpf) return { status: 'erro' as const, motivo: 'Pagador sem CPF', reprocessar: false };
+    if (!d.pagador.cpf)
+      return { status: 'erro' as const, motivo: 'Pagador sem CPF', reprocessar: false };
     const cliente = await this.chamar<{ id: string }>('POST', '/customers', {
       name: d.pagador.nome,
       cpfCnpj: d.pagador.cpf,
@@ -95,12 +101,17 @@ export class GatewayAsaas implements GatewayPagamentoPort {
     const r = await this.chamar<{ id: string }>('POST', `/payments/${d.gatewayCobrancaId}/refund`, {
       value: d.valorCentavos / 100,
     });
-    return r.status === 'ok' ? { status: 'ok' as const, gatewayEstornoId: `${d.gatewayCobrancaId}:refund` } : r;
+    return r.status === 'ok'
+      ? { status: 'ok' as const, gatewayEstornoId: `${d.gatewayCobrancaId}:refund` }
+      : r;
   }
 
   async transferir(d: { valorCentavos: number; destinoId: string | null }) {
     if (!d.destinoId) {
-      return { status: 'pendente_configuracao' as const, motivo: 'Recebedor sem conta (subconta Asaas) cadastrada' };
+      return {
+        status: 'pendente_configuracao' as const,
+        motivo: 'Recebedor sem conta (subconta Asaas) cadastrada',
+      };
     }
     const r = await this.chamar<{ id: string }>('POST', '/transfers', {
       value: d.valorCentavos / 100,

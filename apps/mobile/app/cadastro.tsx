@@ -1,7 +1,17 @@
 import { cadastroUsuario, type RespostaSessao } from '@volante/contracts';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Aviso, Botao, CaixaSelecao, Campo, Chip, Coluna, Linha, Tela, Texto } from '../src/componentes/ui';
+import {
+  Aviso,
+  Botao,
+  CaixaSelecao,
+  Campo,
+  Chip,
+  Coluna,
+  Linha,
+  Tela,
+  Texto,
+} from '../src/componentes/ui';
 import { api, mensagemDeErro } from '../src/servicos/api';
 import { useAuth } from '../src/servicos/AuthProvider';
 import { useTema } from '../src/tema/TemaProvider';
@@ -19,7 +29,15 @@ export default function Cadastro() {
   const instrutor = perfil === 'instrutor';
   const { aplicarSessao, definirModo } = useAuth();
   const { cores } = useTema();
-  const [f, setF] = useState({ nome: '', cpf: '', email: '', telefone: '', senha: '', nascimento: '', genero: '' });
+  const [f, setF] = useState({
+    nome: '',
+    cpf: '',
+    email: '',
+    telefone: '',
+    senha: '',
+    nascimento: '',
+    genero: '',
+  });
   const [termos, setTermos] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [erros, setErros] = useState<Record<string, string>>({});
@@ -78,39 +96,99 @@ export default function Cadastro() {
         </Texto>
       </Coluna>
       {erroGeral && <Aviso tipo="erro">{erroGeral}</Aviso>}
-      <Campo rotulo="Nome completo" value={f.nome} onChangeText={mudar('nome')} erro={erros.nome} autoComplete="name" />
-      <Campo rotulo="CPF" value={f.cpf} onChangeText={(v) => mudar('cpf')(mascararCpf(v))} erro={erros.cpf} keyboardType="number-pad" />
-      <Campo rotulo="Celular" value={f.telefone} onChangeText={(v) => mudar('telefone')(mascararTelefone(v))} erro={erros.telefone} keyboardType="phone-pad" autoComplete="tel" />
-      <Campo rotulo="E-mail" value={f.email} onChangeText={mudar('email')} erro={erros.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
-      <Campo rotulo="Data de nascimento (opcional)" value={f.nascimento} onChangeText={(v) => mudar('nascimento')(mascararData(v))} placeholder="DD/MM/AAAA" keyboardType="number-pad" />
+      <Campo
+        rotulo="Nome completo"
+        value={f.nome}
+        onChangeText={mudar('nome')}
+        erro={erros.nome}
+        autoComplete="name"
+      />
+      <Campo
+        rotulo="CPF"
+        value={f.cpf}
+        onChangeText={(v) => mudar('cpf')(mascararCpf(v))}
+        erro={erros.cpf}
+        keyboardType="number-pad"
+      />
+      <Campo
+        rotulo="Celular"
+        value={f.telefone}
+        onChangeText={(v) => mudar('telefone')(mascararTelefone(v))}
+        erro={erros.telefone}
+        keyboardType="phone-pad"
+        autoComplete="tel"
+      />
+      <Campo
+        rotulo="E-mail"
+        value={f.email}
+        onChangeText={mudar('email')}
+        erro={erros.email}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+      />
+      <Campo
+        rotulo="Data de nascimento (opcional)"
+        value={f.nascimento}
+        onChangeText={(v) => mudar('nascimento')(mascararData(v))}
+        placeholder="DD/MM/AAAA"
+        keyboardType="number-pad"
+      />
       <Coluna>
         <Texto negrito>Gênero (opcional)</Texto>
-        <Texto tipo="pequeno">{instrutor ? 'Alunos podem filtrar instrutores por gênero.' : 'Usado apenas para estatísticas.'}</Texto>
+        <Texto tipo="pequeno">
+          {instrutor
+            ? 'Alunos podem filtrar instrutores por gênero.'
+            : 'Usado apenas para estatísticas.'}
+        </Texto>
         <Linha style={{ flexWrap: 'wrap' }}>
           {GENEROS.map((g) => (
-            <Chip key={g.valor} rotulo={g.rotulo} selecionado={f.genero === g.valor} aoPressionar={() => mudar('genero')(f.genero === g.valor ? '' : g.valor)} />
+            <Chip
+              key={g.valor}
+              rotulo={g.rotulo}
+              selecionado={f.genero === g.valor}
+              aoPressionar={() => mudar('genero')(f.genero === g.valor ? '' : g.valor)}
+            />
           ))}
         </Linha>
       </Coluna>
-      <Campo rotulo="Senha" value={f.senha} onChangeText={mudar('senha')} erro={erros.senha} secureTextEntry ajuda="Mínimo de 8 caracteres" autoComplete="new-password" />
+      <Campo
+        rotulo="Senha"
+        value={f.senha}
+        onChangeText={mudar('senha')}
+        erro={erros.senha}
+        secureTextEntry
+        ajuda="Mínimo de 8 caracteres"
+        autoComplete="new-password"
+      />
       <CaixaSelecao
         marcado={termos}
         aoMudar={setTermos}
         rotulo={
           <Texto>
             Li e aceito os{' '}
-            <Link href="/documento-legal/termos_uso" style={{ color: cores.primaria, fontWeight: '700' }}>
+            <Link
+              href="/documento-legal/termos_uso"
+              style={{ color: cores.primaria, fontWeight: '700' }}
+            >
               termos de uso
             </Link>{' '}
             e a{' '}
-            <Link href="/documento-legal/politica_privacidade" style={{ color: cores.primaria, fontWeight: '700' }}>
+            <Link
+              href="/documento-legal/politica_privacidade"
+              style={{ color: cores.primaria, fontWeight: '700' }}
+            >
               política de privacidade
             </Link>
           </Texto>
         }
       />
       {erros.aceitouTermos && <Texto cor={cores.erro}>{erros.aceitouTermos}</Texto>}
-      <CaixaSelecao marcado={marketing} aoMudar={setMarketing} rotulo="Quero receber novidades e promoções (opcional)" />
+      <CaixaSelecao
+        marcado={marketing}
+        aoMudar={setMarketing}
+        rotulo="Quero receber novidades e promoções (opcional)"
+      />
       <Botao titulo="Criar conta" aoPressionar={enviar} carregando={enviando} />
     </Tela>
   );

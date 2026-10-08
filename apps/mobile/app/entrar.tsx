@@ -30,12 +30,32 @@ export default function Entrar() {
     <Tela>
       <Texto tipo="titulo">Bem-vindo de volta</Texto>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      <Campo rotulo="E-mail ou CPF" value={login} onChangeText={setLogin} autoCapitalize="none" keyboardType="email-address" autoComplete="username" />
-      <Campo rotulo="Senha" value={senha} onChangeText={setSenha} secureTextEntry autoComplete="password" onSubmitEditing={entrar} />
-      <Botao titulo="Entrar" aoPressionar={entrar} carregando={enviando} desabilitado={!login || !senha} />
+      <Campo
+        rotulo="E-mail ou CPF"
+        value={login}
+        onChangeText={setLogin}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        autoComplete="username"
+      />
+      <Campo
+        rotulo="Senha"
+        value={senha}
+        onChangeText={setSenha}
+        secureTextEntry
+        autoComplete="password"
+        onSubmitEditing={entrar}
+      />
+      <Botao
+        titulo="Entrar"
+        aoPressionar={entrar}
+        carregando={enviando}
+        desabilitado={!login || !senha}
+      />
       {__DEV__ && (
         <Texto tipo="pequeno" centro>
-          Servidor: {urlApi()} · contas de teste: aluno@demo.com / instrutor@demo.com (senha demo1234)
+          Servidor: {urlApi()} · contas de teste: aluno@demo.com / instrutor@demo.com (senha
+          demo1234)
         </Texto>
       )}
     </Tela>

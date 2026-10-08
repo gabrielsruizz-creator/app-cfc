@@ -39,25 +39,38 @@ type Filtros = {
 };
 
 function paraQuery(ponto: Ponto, f: Filtros) {
-  const p = new URLSearchParams({ lat: String(ponto.lat), lng: String(ponto.lng), ordenar: f.ordenar });
-  for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== false && k !== 'ordenar') p.set(k, String(v));
+  const p = new URLSearchParams({
+    lat: String(ponto.lat),
+    lng: String(ponto.lng),
+    ordenar: f.ordenar,
+  });
+  for (const [k, v] of Object.entries(f))
+    if (v !== undefined && v !== false && k !== 'ordenar') p.set(k, String(v));
   return p.toString();
 }
 
 function CartaoInstrutor({ i }: { i: InstrutorCard }) {
   const { cores } = useTema();
   return (
-    <Cartao aoPressionar={() => router.push(`/perfil-instrutor/${i.id}`)} rotuloAcessivel={`${i.nome}, ${formatarCentavos(i.precoAulaCentavos)} por aula, a ${i.distanciaKm} quilômetros`}>
+    <Cartao
+      aoPressionar={() => router.push(`/perfil-instrutor/${i.id}`)}
+      rotuloAcessivel={`${i.nome}, ${formatarCentavos(i.precoAulaCentavos)} por aula, a ${i.distanciaKm} quilômetros`}
+    >
       <Linha gap={12}>
         <Avatar nome={i.nome} arquivoId={i.fotoArquivoId} publico tamanho={56} />
         <Coluna gap={2} style={{ flex: 1 }}>
-          <Texto negrito linhas={1}>{i.nome}</Texto>
+          <Texto negrito linhas={1}>
+            {i.nome}
+          </Texto>
           <Linha gap={6}>
             <Estrelas nota={i.notaMedia ?? 0} tamanho={14} />
-            <Texto tipo="pequeno">{i.totalAvaliacoes ? `${i.notaMedia?.toFixed(1)} (${i.totalAvaliacoes})` : 'Novo'}</Texto>
+            <Texto tipo="pequeno">
+              {i.totalAvaliacoes ? `${i.notaMedia?.toFixed(1)} (${i.totalAvaliacoes})` : 'Novo'}
+            </Texto>
           </Linha>
           <Texto tipo="pequeno">
-            {i.distanciaKm.toLocaleString('pt-BR')} km · {i.anosExperiencia ? `${i.anosExperiencia} anos de experiência` : 'Instrutor'}
+            {i.distanciaKm.toLocaleString('pt-BR')} km ·{' '}
+            {i.anosExperiencia ? `${i.anosExperiencia} anos de experiência` : 'Instrutor'}
           </Texto>
         </Coluna>
         <Coluna gap={0} style={{ alignItems: 'flex-end' }}>
@@ -72,9 +85,20 @@ function CartaoInstrutor({ i }: { i: InstrutorCard }) {
         {i.categorias.map((c) => (
           <Selo key={c} texto={`Cat. ${c}`} cor={cores.texto} fundo={cores.superficieAlt} />
         ))}
-        {i.cambios.includes('automatico') && <Selo texto="Automático" cor={cores.texto} fundo={cores.superficieAlt} />}
-        {i.adaptadoPcd && <Selo texto="Adaptado PcD" icone="accessibility" cor={cores.texto} fundo={cores.superficieAlt} />}
-        {!i.forneceVeiculo && <Selo texto="Usa seu veículo" cor={cores.alerta} fundo={cores.alertaSuave} />}
+        {i.cambios.includes('automatico') && (
+          <Selo texto="Automático" cor={cores.texto} fundo={cores.superficieAlt} />
+        )}
+        {i.adaptadoPcd && (
+          <Selo
+            texto="Adaptado PcD"
+            icone="accessibility"
+            cor={cores.texto}
+            fundo={cores.superficieAlt}
+          />
+        )}
+        {!i.forneceVeiculo && (
+          <Selo texto="Usa seu veículo" cor={cores.alerta} fundo={cores.alertaSuave} />
+        )}
       </Linha>
     </Cartao>
   );
@@ -86,7 +110,10 @@ export default function Buscar() {
   const [ponto, setPonto] = useState<Ponto | null>(null);
   const [visao, setVisao] = useState<'mapa' | 'lista'>('lista');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
-  const [filtros, setFiltros] = useState<Filtros>({ ordenar: 'distancia', categoria: eu?.aluno?.categoriaDesejada === 'AB' ? 'B' : eu?.aluno?.categoriaDesejada });
+  const [filtros, setFiltros] = useState<Filtros>({
+    ordenar: 'distancia',
+    categoria: eu?.aluno?.categoriaDesejada === 'AB' ? 'B' : eu?.aluno?.categoriaDesejada,
+  });
   const [rascunho, setRascunho] = useState<Filtros>(filtros);
   const [semLocalizacao, setSemLocalizacao] = useState(false);
 
@@ -104,7 +131,9 @@ export default function Buscar() {
   });
 
   const quantidadeFiltros = useMemo(
-    () => Object.entries(filtros).filter(([k, v]) => k !== 'ordenar' && v !== undefined && v !== false).length,
+    () =>
+      Object.entries(filtros).filter(([k, v]) => k !== 'ordenar' && v !== undefined && v !== false)
+        .length,
     [filtros],
   );
 
@@ -114,10 +143,24 @@ export default function Buscar() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: cores.fundo }}>
       <View style={{ padding: espaco.lg, gap: espaco.md }}>
         <Texto tipo="titulo">Instrutores perto de você</Texto>
-        {semLocalizacao && <Texto tipo="pequeno">Localização não liberada — mostrando a região central de São Paulo.</Texto>}
+        {semLocalizacao && (
+          <Texto tipo="pequeno">
+            Localização não liberada — mostrando a região central de São Paulo.
+          </Texto>
+        )}
         <Linha>
-          <Chip rotulo="Lista" icone="list" selecionado={visao === 'lista'} aoPressionar={() => setVisao('lista')} />
-          <Chip rotulo="Mapa" icone="map" selecionado={visao === 'mapa'} aoPressionar={() => setVisao('mapa')} />
+          <Chip
+            rotulo="Lista"
+            icone="list"
+            selecionado={visao === 'lista'}
+            aoPressionar={() => setVisao('lista')}
+          />
+          <Chip
+            rotulo="Mapa"
+            icone="map"
+            selecionado={visao === 'mapa'}
+            aoPressionar={() => setVisao('mapa')}
+          />
           <View style={{ flex: 1 }} />
           <Chip
             rotulo={quantidadeFiltros ? `Filtros (${quantidadeFiltros})` : 'Filtros'}
@@ -138,7 +181,12 @@ export default function Buscar() {
           style={{ flex: 1 }}
           userInterfaceStyle={escuro ? 'dark' : 'light'}
           showsUserLocation
-          initialRegion={{ latitude: ponto.lat, longitude: ponto.lng, latitudeDelta: 0.08, longitudeDelta: 0.08 }}
+          initialRegion={{
+            latitude: ponto.lat,
+            longitude: ponto.lng,
+            latitudeDelta: 0.08,
+            longitudeDelta: 0.08,
+          }}
         >
           {q.data?.map((i) => (
             <Marker
@@ -155,25 +203,52 @@ export default function Buscar() {
         <FlatList
           data={q.data ?? []}
           keyExtractor={(i) => i.id}
-          contentContainerStyle={{ padding: espaco.lg, paddingTop: 0, gap: espaco.md, paddingBottom: espaco.xxl }}
+          contentContainerStyle={{
+            padding: espaco.lg,
+            paddingTop: 0,
+            gap: espaco.md,
+            paddingBottom: espaco.xxl,
+          }}
           renderItem={({ item }) => <CartaoInstrutor i={item} />}
           refreshing={q.isRefetching}
           onRefresh={() => void q.refetch()}
           ListEmptyComponent={
-            <Vazio icone="search" titulo="Nenhum instrutor encontrado" texto="Tente remover alguns filtros ou buscar em outra região." />
+            <Vazio
+              icone="search"
+              titulo="Nenhum instrutor encontrado"
+              texto="Tente remover alguns filtros ou buscar em outra região."
+            />
           }
         />
       )}
 
-      <Modal visible={mostrarFiltros} animationType="slide" transparent onRequestClose={() => setMostrarFiltros(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: '#0008' }} onPress={() => setMostrarFiltros(false)} accessibilityLabel="Fechar filtros" />
+      <Modal
+        visible={mostrarFiltros}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setMostrarFiltros(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: '#0008' }}
+          onPress={() => setMostrarFiltros(false)}
+          accessibilityLabel="Fechar filtros"
+        />
         <ScrollView
-          style={{ backgroundColor: cores.superficie, borderTopLeftRadius: raio.lg, borderTopRightRadius: raio.lg, maxHeight: '85%' }}
+          style={{
+            backgroundColor: cores.superficie,
+            borderTopLeftRadius: raio.lg,
+            borderTopRightRadius: raio.lg,
+            maxHeight: '85%',
+          }}
           contentContainerStyle={{ padding: espaco.lg, gap: espaco.lg }}
         >
           <Linha style={{ justifyContent: 'space-between' }}>
             <Texto tipo="subtitulo">Filtros</Texto>
-            <Pressable accessibilityRole="button" accessibilityLabel="Fechar" onPress={() => setMostrarFiltros(false)}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Fechar"
+              onPress={() => setMostrarFiltros(false)}
+            >
               <Ionicons name="close" size={26} color={cores.texto} />
             </Pressable>
           </Linha>
@@ -181,7 +256,17 @@ export default function Buscar() {
             <Texto negrito>Categoria</Texto>
             <Linha style={{ flexWrap: 'wrap' }}>
               {['A', 'B', 'C', 'D', 'E'].map((c) => (
-                <Chip key={c} rotulo={c} selecionado={rascunho.categoria === c} aoPressionar={() => setRascunho({ ...rascunho, categoria: rascunho.categoria === c ? undefined : c })} />
+                <Chip
+                  key={c}
+                  rotulo={c}
+                  selecionado={rascunho.categoria === c}
+                  aoPressionar={() =>
+                    setRascunho({
+                      ...rascunho,
+                      categoria: rascunho.categoria === c ? undefined : c,
+                    })
+                  }
+                />
               ))}
             </Linha>
           </Coluna>
@@ -189,7 +274,17 @@ export default function Buscar() {
             <Texto negrito>Preço máximo por aula</Texto>
             <Linha style={{ flexWrap: 'wrap' }}>
               {[8000, 10000, 12000, 15000].map((v) => (
-                <Chip key={v} rotulo={`até ${formatarCentavos(v)}`} selecionado={rascunho.precoMaxCentavos === v} aoPressionar={() => setRascunho({ ...rascunho, precoMaxCentavos: rascunho.precoMaxCentavos === v ? undefined : v })} />
+                <Chip
+                  key={v}
+                  rotulo={`até ${formatarCentavos(v)}`}
+                  selecionado={rascunho.precoMaxCentavos === v}
+                  aoPressionar={() =>
+                    setRascunho({
+                      ...rascunho,
+                      precoMaxCentavos: rascunho.precoMaxCentavos === v ? undefined : v,
+                    })
+                  }
+                />
               ))}
             </Linha>
           </Coluna>
@@ -197,7 +292,14 @@ export default function Buscar() {
             <Texto negrito>Avaliação mínima</Texto>
             <Linha>
               {[4, 4.5].map((v) => (
-                <Chip key={v} rotulo={`${v}+ ★`} selecionado={rascunho.notaMin === v} aoPressionar={() => setRascunho({ ...rascunho, notaMin: rascunho.notaMin === v ? undefined : v })} />
+                <Chip
+                  key={v}
+                  rotulo={`${v}+ ★`}
+                  selecionado={rascunho.notaMin === v}
+                  aoPressionar={() =>
+                    setRascunho({ ...rascunho, notaMin: rascunho.notaMin === v ? undefined : v })
+                  }
+                />
               ))}
             </Linha>
           </Coluna>
@@ -208,7 +310,14 @@ export default function Buscar() {
                 ['feminino', 'Mulher'],
                 ['masculino', 'Homem'],
               ].map(([v, r]) => (
-                <Chip key={v} rotulo={r!} selecionado={rascunho.genero === v} aoPressionar={() => setRascunho({ ...rascunho, genero: rascunho.genero === v ? undefined : v })} />
+                <Chip
+                  key={v}
+                  rotulo={r!}
+                  selecionado={rascunho.genero === v}
+                  aoPressionar={() =>
+                    setRascunho({ ...rascunho, genero: rascunho.genero === v ? undefined : v })
+                  }
+                />
               ))}
             </Linha>
           </Coluna>
@@ -219,12 +328,27 @@ export default function Buscar() {
                 ['manual', 'Manual'],
                 ['automatico', 'Automático'],
               ].map(([v, r]) => (
-                <Chip key={v} rotulo={r!} selecionado={rascunho.cambio === v} aoPressionar={() => setRascunho({ ...rascunho, cambio: rascunho.cambio === v ? undefined : v })} />
+                <Chip
+                  key={v}
+                  rotulo={r!}
+                  selecionado={rascunho.cambio === v}
+                  aoPressionar={() =>
+                    setRascunho({ ...rascunho, cambio: rascunho.cambio === v ? undefined : v })
+                  }
+                />
               ))}
             </Linha>
           </Coluna>
-          <Interruptor rotulo="Carro adaptado (PcD)" ligado={!!rascunho.adaptadoPcd} aoMudar={(v) => setRascunho({ ...rascunho, adaptadoPcd: v })} />
-          <Interruptor rotulo="Instrutor fornece o veículo" ligado={!!rascunho.forneceVeiculo} aoMudar={(v) => setRascunho({ ...rascunho, forneceVeiculo: v })} />
+          <Interruptor
+            rotulo="Carro adaptado (PcD)"
+            ligado={!!rascunho.adaptadoPcd}
+            aoMudar={(v) => setRascunho({ ...rascunho, adaptadoPcd: v })}
+          />
+          <Interruptor
+            rotulo="Instrutor fornece o veículo"
+            ligado={!!rascunho.forneceVeiculo}
+            aoMudar={(v) => setRascunho({ ...rascunho, forneceVeiculo: v })}
+          />
           <Coluna>
             <Texto negrito>Ordenar por</Texto>
             <Linha>
@@ -235,13 +359,22 @@ export default function Buscar() {
                   ['avaliacao', 'Avaliação'],
                 ] as const
               ).map(([v, r]) => (
-                <Chip key={v} rotulo={r} selecionado={rascunho.ordenar === v} aoPressionar={() => setRascunho({ ...rascunho, ordenar: v })} />
+                <Chip
+                  key={v}
+                  rotulo={r}
+                  selecionado={rascunho.ordenar === v}
+                  aoPressionar={() => setRascunho({ ...rascunho, ordenar: v })}
+                />
               ))}
             </Linha>
           </Coluna>
           <Linha>
             <View style={{ flex: 1 }}>
-              <Botao titulo="Limpar" variante="secundario" aoPressionar={() => setRascunho({ ordenar: 'distancia' })} />
+              <Botao
+                titulo="Limpar"
+                variante="secundario"
+                aoPressionar={() => setRascunho({ ordenar: 'distancia' })}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Botao

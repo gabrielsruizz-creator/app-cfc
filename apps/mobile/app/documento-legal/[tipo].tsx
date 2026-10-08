@@ -8,7 +8,10 @@ type Doc = { tipo: string; versao: string; conteudoMd: string };
 /** Exibe o texto vigente de um documento legal (termos, privacidade). */
 export default function DocumentoLegal() {
   const { tipo } = useLocalSearchParams<{ tipo: string }>();
-  const { data, isLoading } = useQuery({ queryKey: ['documentos-legais'], queryFn: () => api<Doc[]>('/publico/documentos-legais') });
+  const { data, isLoading } = useQuery({
+    queryKey: ['documentos-legais'],
+    queryFn: () => api<Doc[]>('/publico/documentos-legais'),
+  });
   if (isLoading) return <Carregando />;
   const doc = data?.find((d) => d.tipo === tipo);
   return (

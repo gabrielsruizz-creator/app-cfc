@@ -7,14 +7,23 @@ import { Avatar, Carregando, Coluna, Linha, Tela, Texto } from '../../../src/com
 import { api } from '../../../src/servicos/api';
 
 type Ficha = {
-  aluno: { alunoId: string; nome: string; selfieArquivoId: string | null; categoriaDesejada: string; aulasConcluidas: number };
+  aluno: {
+    alunoId: string;
+    nome: string;
+    selfieArquivoId: string | null;
+    categoriaDesejada: string;
+    aulasConcluidas: number;
+  };
   aulas: AulaResumo[];
   evolucao: EvolucaoAluno;
 };
 
 export default function FichaAluno() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const q = useQuery({ queryKey: ['instrutor', 'ficha', id], queryFn: () => api<Ficha>(`/instrutor/alunos/${id}`) });
+  const q = useQuery({
+    queryKey: ['instrutor', 'ficha', id],
+    queryFn: () => api<Ficha>(`/instrutor/alunos/${id}`),
+  });
   if (q.isLoading || !q.data) return <Carregando />;
   const { aluno, aulas, evolucao } = q.data;
   return (
@@ -29,7 +38,12 @@ export default function FichaAluno() {
       <PainelEvolucao dados={evolucao} />
       <Texto tipo="subtitulo">Aulas com você</Texto>
       {aulas.map((a) => (
-        <CartaoAula key={a.id} aula={a} visao="instrutor" aoPressionar={() => router.push(`/area-instrutor/aula/${a.id}`)} />
+        <CartaoAula
+          key={a.id}
+          aula={a}
+          visao="instrutor"
+          aoPressionar={() => router.push(`/area-instrutor/aula/${a.id}`)}
+        />
       ))}
     </Tela>
   );

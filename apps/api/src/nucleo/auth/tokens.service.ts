@@ -14,7 +14,10 @@ export class TokensService {
     this.chave = new TextEncoder().encode(config.JWT_SEGREDO);
   }
 
-  async emitirAcesso(usuarioId: string, sessaoId: string): Promise<{ token: string; expiraEm: Date }> {
+  async emitirAcesso(
+    usuarioId: string,
+    sessaoId: string,
+  ): Promise<{ token: string; expiraEm: Date }> {
     const expiraEm = new Date(Date.now() + DURACAO_ACESSO_MIN * 60_000);
     const token = await new SignJWT({ sid: sessaoId })
       .setProtectedHeader({ alg: 'HS256' })

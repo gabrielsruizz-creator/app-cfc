@@ -1,18 +1,38 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Aviso, Botao, Campo, Cartao, Carregando, Coluna, Interruptor, Linha, Tela, Texto } from '../../src/componentes/ui';
+import {
+  Aviso,
+  Botao,
+  Campo,
+  Cartao,
+  Carregando,
+  Coluna,
+  Interruptor,
+  Linha,
+  Tela,
+  Texto,
+} from '../../src/componentes/ui';
 import { api, mensagemDeErro } from '../../src/servicos/api';
 
 type Faixa = { diaSemana: number; horaInicio: string; horaFim: string };
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
-const mascararHora = (v: string) => v.replace(/\D/g, '').slice(0, 4).replace(/(\d{2})(\d)/, '$1:$2');
+const mascararHora = (v: string) =>
+  v
+    .replace(/\D/g, '')
+    .slice(0, 4)
+    .replace(/(\d{2})(\d)/, '$1:$2');
 
 export default function Jornada() {
   const queryClient = useQueryClient();
-  const q = useQuery({ queryKey: ['instrutor', 'jornada'], queryFn: () => api<{ faixas: Faixa[] }>('/instrutor/jornada') });
-  const [dias, setDias] = useState<Record<number, { ativo: boolean; inicio: string; fim: string }>>({});
+  const q = useQuery({
+    queryKey: ['instrutor', 'jornada'],
+    queryFn: () => api<{ faixas: Faixa[] }>('/instrutor/jornada'),
+  });
+  const [dias, setDias] = useState<Record<number, { ativo: boolean; inicio: string; fim: string }>>(
+    {},
+  );
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -46,7 +66,10 @@ export default function Jornada() {
   if (q.isLoading || !Object.keys(dias).length) return <Carregando />;
   return (
     <Tela>
-      <Texto tipo="suave">Defina os dias e horários em que você atende. Os alunos só veem horários livres dentro da jornada.</Texto>
+      <Texto tipo="suave">
+        Defina os dias e horários em que você atende. Os alunos só veem horários livres dentro da
+        jornada.
+      </Texto>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {DIAS.map((nome, d) => {
         const v = dias[d]!;
@@ -57,10 +80,20 @@ export default function Jornada() {
             {v.ativo && (
               <Linha>
                 <Coluna style={{ flex: 1 }}>
-                  <Campo rotulo="Início" value={v.inicio} onChangeText={(t) => mudar({ inicio: mascararHora(t) })} keyboardType="number-pad" />
+                  <Campo
+                    rotulo="Início"
+                    value={v.inicio}
+                    onChangeText={(t) => mudar({ inicio: mascararHora(t) })}
+                    keyboardType="number-pad"
+                  />
                 </Coluna>
                 <Coluna style={{ flex: 1 }}>
-                  <Campo rotulo="Fim" value={v.fim} onChangeText={(t) => mudar({ fim: mascararHora(t) })} keyboardType="number-pad" />
+                  <Campo
+                    rotulo="Fim"
+                    value={v.fim}
+                    onChangeText={(t) => mudar({ fim: mascararHora(t) })}
+                    keyboardType="number-pad"
+                  />
                 </Coluna>
               </Linha>
             )}
@@ -68,7 +101,11 @@ export default function Jornada() {
         );
       })}
       <Botao titulo="Salvar jornada" carregando={salvando} aoPressionar={salvar} />
-      <Botao titulo="Folgas e férias" variante="texto" aoPressionar={() => router.push('/area-instrutor/bloqueios')} />
+      <Botao
+        titulo="Folgas e férias"
+        variante="texto"
+        aoPressionar={() => router.push('/area-instrutor/bloqueios')}
+      />
     </Tela>
   );
 }

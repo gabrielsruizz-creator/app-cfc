@@ -1,6 +1,7 @@
 import type { CategoriaCnh, Gateway } from '@volante/contracts';
 import {
   and,
+  aulaHistorico,
   aulas,
   bloqueiosAgenda,
   cobrancas,
@@ -71,7 +72,11 @@ export async function horariosLivresInstrutor(
   return calcularHorariosLivres({
     data,
     fusoHorario: instrutor.fusoHorario,
-    faixas: faixas.map((f) => ({ diaSemana: f.diaSemana, horaInicio: f.horaInicio, horaFim: f.horaFim })),
+    faixas: faixas.map((f) => ({
+      diaSemana: f.diaSemana,
+      horaInicio: f.horaInicio,
+      horaFim: f.horaFim,
+    })),
     duracaoMin: instrutor.duracaoAulaMin,
     intervaloMin: cfg['aula.intervalo_entre_aulas_min'],
     ocupados: ocupados.rows.map((o) => ({ inicio: new Date(o.inicio), fim: new Date(o.fim) })),
@@ -105,23 +110,43 @@ export async function solicitarAulaAvulsa(tx: Tx, d: DadosSolicitacao) {
   const agora = d.agora ?? new Date();
   const { instrutor, nome: nomeInstrutor } = await carregarInstrutorAtivo(tx, d.instrutorId);
   if (instrutor.status !== 'aprovado' || !instrutor.disponivel) {
-    throw new ErroDominio('instrutor_indisponivel', 'Este instrutor não está recebendo aulas no momento');
+    throw new ErroDominio(
+      'instrutor_indisponivel',
+      'Este instrutor não está recebendo aulas no momento',
+    );
   }
   if (!instrutor.categorias.includes(d.categoria)) {
-    throw new ErroDominio('categoria_nao_atendida', `Este instrutor não dá aulas da categoria ${d.categoria}`);
+    throw new ErroDominio(
+      'categoria_nao_atendida',
+      `Este instrutor não dá aulas da categoria ${d.categoria}`,
+    );
   }
   if (!instrutor.precoAulaCentavos) {
-    throw new ErroDominio('instrutor_sem_preco', 'Este instrutor ainda não definiu o preço da aula');
+    throw new ErroDominio(
+      'instrutor_sem_preco',
+      'Este instrutor ainda não definiu o preço da aula',
+    );
   }
 
-  const livres = await horariosLivresInstrutor(tx, instrutor, dataLocal(d.inicio, instrutor.fusoHorario), agora);
+  const livres = await horariosLivresInstrutor(
+    tx,
+    instrutor,
+    dataLocal(d.inicio, instrutor.fusoHorario),
+    agora,
+  );
   const slot = livres.find((l) => l.inicio.getTime() === d.inicio.getTime());
   if (!slot) {
-    throw new ErroDominio('horario_indisponivel', 'Esse horário não está mais disponível. Escolha outro.', 'conflito');
+    throw new ErroDominio(
+      'horario_indisponivel',
+      'Esse horário não está mais disponível. Escolha outro.',
+      'conflito',
+    );
   }
 
   const cfg = await lerConfiguracoes(tx);
-  const regra = await regraComissaoVigente(tx, 'instrutor', 'aula_avulsa', { instrutorId: instrutor.id });
+  const regra = await regraComissaoVigente(tx, 'instrutor', 'aula_avulsa', {
+    instrutorId: instrutor.id,
+  });
   const valor = instrutor.precoAulaCentavos;
   const comissao = calcularComissao(valor, regra);
 
@@ -212,6 +237,13 @@ export async function solicitarAulaAvulsa(tx: Tx, d: DadosSolicitacao) {
   await tx
     .insert(creditosMovimentos)
     .values({ creditoId: credito!.id, aulaId: aula!.id, tipo: 'reserva', quantidade: 1 });
+  await tx.insert(aulaHistorico).values({
+    aulaId: aula!.id,
+    alunoId: d.alunoId,
+    instrutorId: instrutor.id,
+    paraStatus: 'aguardando_pagamento',
+    motivo: 'Aula solicitada; aguardando o Pix',
+  });
 
   const [cobranca] = await tx
     .insert(cobrancas)

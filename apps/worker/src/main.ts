@@ -1,3 +1,6 @@
+import { carregarEnv } from './carregar-env';
+carregarEnv();
+
 import { conectar } from '@volante/db';
 import { Client } from 'pg';
 import { lerConfigWorker, montarDependencias } from './config';
@@ -54,7 +57,9 @@ async function iniciar() {
     }
   }, config.INTERVALO_ROTINAS_SEG * 1000);
 
-  deps.log.info(`Worker iniciado. Gateways: ${Object.keys(deps.gateways).join(', ')}; push: ${config.PUSH_PROVEDOR}`);
+  deps.log.info(
+    `Worker iniciado. Gateways: ${Object.keys(deps.gateways).join(', ')}; push: ${config.PUSH_PROVEDOR}`,
+  );
   void drenar();
 
   const parar = async () => {

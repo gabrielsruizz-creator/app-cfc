@@ -28,7 +28,14 @@ type Pedido = typeof pedidos.$inferSelect;
 export const TRANSICOES_AULA: Record<StatusAula, readonly StatusAula[]> = {
   aguardando_pagamento: ['solicitada', 'expirada', 'cancelada'],
   solicitada: ['confirmada', 'recusada', 'expirada', 'cancelada', 'solicitada'],
-  confirmada: ['a_caminho', 'em_andamento', 'cancelada', 'solicitada', 'nao_compareceu_aluno', 'nao_compareceu_instrutor'],
+  confirmada: [
+    'a_caminho',
+    'em_andamento',
+    'cancelada',
+    'solicitada',
+    'nao_compareceu_aluno',
+    'nao_compareceu_instrutor',
+  ],
   a_caminho: ['em_andamento', 'cancelada', 'nao_compareceu_aluno'],
   em_andamento: ['aguardando_confirmacao'],
   aguardando_confirmacao: ['concluida'],
@@ -73,7 +80,11 @@ export async function mudarStatusAula(
     .where(and(eq(aulas.id, aula.id), eq(aulas.status, de)))
     .returning();
   if (!atualizada) {
-    throw new ErroDominio('aula_alterada', 'A aula foi alterada por outra ação. Tente novamente.', 'conflito');
+    throw new ErroDominio(
+      'aula_alterada',
+      'A aula foi alterada por outra ação. Tente novamente.',
+      'conflito',
+    );
   }
   await tx.insert(aulaHistorico).values({
     aulaId: aula.id,
@@ -167,11 +178,19 @@ export function calcularAceiteAte(
  * Se a aula já tinha expirado (Pix pago depois do prazo), o valor é estornado automaticamente.
  */
 export async function confirmarPagamento(tx: Tx, cobrancaId: string, agora = new Date()) {
-  const [cobranca] = await tx.select().from(cobrancas).where(eq(cobrancas.id, cobrancaId)).for('update');
+  const [cobranca] = await tx
+    .select()
+    .from(cobrancas)
+    .where(eq(cobrancas.id, cobrancaId))
+    .for('update');
   if (!cobranca) throw naoEncontrado('cobranca');
-  if (['paga', 'estornada', 'estornada_parcial'].includes(cobranca.status)) return { jaProcessada: true };
+  if (['paga', 'estornada', 'estornada_parcial'].includes(cobranca.status))
+    return { jaProcessada: true };
 
-  await tx.update(cobrancas).set({ status: 'paga', pagoEm: agora }).where(eq(cobrancas.id, cobranca.id));
+  await tx
+    .update(cobrancas)
+    .set({ status: 'paga', pagoEm: agora })
+    .where(eq(cobrancas.id, cobranca.id));
   let pedido = await carregarPedido(tx, cobranca.pedidoId);
   const pedidoEstavaCancelado = pedido.status === 'cancelado';
   pedido = await mudarStatusPedido(tx, pedido, 'pago', { extras: { pagoEm: agora } });
@@ -185,7 +204,11 @@ export async function confirmarPagamento(tx: Tx, cobrancaId: string, agora = new
   });
   await emitirRecibo(tx, pedido, agora);
 
-  const aulasDoPedido = await tx.select().from(aulas).where(eq(aulas.pedidoId, pedido.id)).for('update');
+  const aulasDoPedido = await tx
+    .select()
+    .from(aulas)
+    .where(eq(aulas.pedidoId, pedido.id))
+    .for('update');
   const cfg = await lerConfiguracoes(tx);
 
   if (pedidoEstavaCancelado || aulasDoPedido.every((a) => a.status !== 'aguardando_pagamento')) {
@@ -205,7 +228,10 @@ export async function confirmarPagamento(tx: Tx, cobrancaId: string, agora = new
       prazoAceiteHoras: cfg['aula.prazo_aceite_horas'],
       limiteAntesInicioHoras: cfg['aula.aceite_limite_antes_inicio_horas'],
     });
-    await mudarStatusAula(tx, aula, 'solicitada', { motivo: 'Pagamento confirmado', extras: { aceiteAte } });
+    await mudarStatusAula(tx, aula, 'solicitada', {
+      motivo: 'Pagamento confirmado',
+      extras: { aceiteAte },
+    });
     await publicarEvento(tx, {
       tipo: 'aula.solicitada',
       agregadoTipo: 'aula',
@@ -285,7 +311,11 @@ export async function encerrarComEstornoTotal(
     atorUsuarioId: opcoes.atorUsuarioId,
     extras:
       para === 'cancelada'
-        ? { canceladaEm: agora, canceladaPor: opcoes.canceladaPor ?? 'sistema', motivoCancelamento: opcoes.motivo }
+        ? {
+            canceladaEm: agora,
+            canceladaPor: opcoes.canceladaPor ?? 'sistema',
+            motivoCancelamento: opcoes.motivo,
+          }
         : {},
   });
   const pedido = await carregarPedido(tx, aula.pedidoId);
@@ -318,9 +348,15 @@ export function calcularCancelamento(
   const politica = aula.politicaCancelamento;
   const gratisAte = new Date(aula.inicio.getTime() - politica.gratisAteHoras * 3600_000);
   // Antes da confirmação do instrutor, cancelar é sempre grátis.
-  const gratuito = agora <= gratisAte || aula.status === 'solicitada' || aula.status === 'aguardando_pagamento';
+  const gratuito =
+    agora <= gratisAte || aula.status === 'solicitada' || aula.status === 'aguardando_pagamento';
   const multa = gratuito ? 0 : Math.round((aula.valorCentavos * politica.multaBp) / 10000);
-  return { gratuito, multaCentavos: multa, reembolsoCentavos: aula.valorCentavos - multa, gratisAte };
+  return {
+    gratuito,
+    multaCentavos: multa,
+    reembolsoCentavos: aula.valorCentavos - multa,
+    gratisAte,
+  };
 }
 
 export async function cancelarAula(
@@ -343,7 +379,10 @@ export async function cancelarAula(
     });
     await movimentarCredito(tx, aula.creditoId, aula.id, 'devolucao', 'cancelado');
     const pedido = await carregarPedido(tx, aula.pedidoId);
-    await mudarStatusPedido(tx, pedido, 'cancelado', { motivo: opcoes.motivo, atorUsuarioId: opcoes.atorUsuarioId });
+    await mudarStatusPedido(tx, pedido, 'cancelado', {
+      motivo: opcoes.motivo,
+      atorUsuarioId: opcoes.atorUsuarioId,
+    });
   } else {
     const calculo = calcularCancelamento(aula, agora);
     const comMulta = opcoes.por === 'aluno' && !calculo.gratuito;

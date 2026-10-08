@@ -1,4 +1,9 @@
-import type { AulaDetalhe, ConfiguracoesPublicas, HorarioLivre, PerfilInstrutorPublico } from '@volante/contracts';
+import type {
+  AulaDetalhe,
+  ConfiguracoesPublicas,
+  HorarioLivre,
+  PerfilInstrutorPublico,
+} from '@volante/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -20,13 +25,22 @@ import { api, mensagemDeErro } from '../../src/servicos/api';
 import { useAuth } from '../../src/servicos/AuthProvider';
 import { espaco, raio } from '../../src/tema/cores';
 import { useTema } from '../../src/tema/TemaProvider';
-import { enderecoDe, obterLocalizacao, PONTO_PADRAO, pontoDeEndereco, type Ponto } from '../../src/util/dispositivo';
+import {
+  enderecoDe,
+  obterLocalizacao,
+  PONTO_PADRAO,
+  pontoDeEndereco,
+  type Ponto,
+} from '../../src/util/dispositivo';
 import { dataCurta, formatarCentavos, hora, partesData } from '../../src/util/formatos';
 
 type Passo = 'quando' | 'onde' | 'resumo';
 
 export default function Agendar() {
-  const { instrutorId, remarcar } = useLocalSearchParams<{ instrutorId: string; remarcar?: string }>();
+  const { instrutorId, remarcar } = useLocalSearchParams<{
+    instrutorId: string;
+    remarcar?: string;
+  }>();
   const { eu } = useAuth();
   const { cores, escuro } = useTema();
   const [passo, setPasso] = useState<Passo>('quando');
@@ -41,11 +55,20 @@ export default function Agendar() {
   const chaveIdempotencia = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const mapa = useRef<MapView>(null);
 
-  const instrutor = useQuery({ queryKey: ['instrutor', instrutorId], queryFn: () => api<PerfilInstrutorPublico>(`/publico/instrutores/${instrutorId}`) });
-  const config = useQuery({ queryKey: ['config-publica'], queryFn: () => api<ConfiguracoesPublicas>('/publico/configuracoes') });
+  const instrutor = useQuery({
+    queryKey: ['instrutor', instrutorId],
+    queryFn: () => api<PerfilInstrutorPublico>(`/publico/instrutores/${instrutorId}`),
+  });
+  const config = useQuery({
+    queryKey: ['config-publica'],
+    queryFn: () => api<ConfiguracoesPublicas>('/publico/configuracoes'),
+  });
   const dias = useQuery({
     queryKey: ['dias', instrutorId],
-    queryFn: () => api<{ dias: { data: string; quantidadeHorarios: number }[] }>(`/publico/instrutores/${instrutorId}/dias`),
+    queryFn: () =>
+      api<{ dias: { data: string; quantidadeHorarios: number }[] }>(
+        `/publico/instrutores/${instrutorId}/dias`,
+      ),
   });
   const horarios = useQuery({
     queryKey: ['horarios', instrutorId, data],
@@ -61,7 +84,11 @@ export default function Agendar() {
   useEffect(() => {
     if (!instrutor.data || categoria) return;
     const desejada = eu?.aluno?.categoriaDesejada;
-    setCategoria(instrutor.data.categorias.find((c) => desejada?.includes(c)) ?? instrutor.data.categorias[0] ?? null);
+    setCategoria(
+      instrutor.data.categorias.find((c) => desejada?.includes(c)) ??
+        instrutor.data.categorias[0] ??
+        null,
+    );
   }, [instrutor.data, categoria, eu]);
 
   useEffect(() => {
@@ -80,7 +107,12 @@ export default function Agendar() {
     if (!p) return setErro('Endereço não encontrado. Arraste o pino no mapa.');
     setErro(null);
     setPonto(p);
-    mapa.current?.animateToRegion({ latitude: p.lat, longitude: p.lng, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+    mapa.current?.animateToRegion({
+      latitude: p.lat,
+      longitude: p.lng,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
   }
 
   async function confirmarRemarcacao() {
@@ -140,12 +172,21 @@ export default function Agendar() {
             <Texto negrito>Categoria da aula</Texto>
             <Linha>
               {i.categorias.map((c) => (
-                <Chip key={c} rotulo={`Categoria ${c}`} selecionado={categoria === c} aoPressionar={() => setCategoria(c)} />
+                <Chip
+                  key={c}
+                  rotulo={`Categoria ${c}`}
+                  selecionado={categoria === c}
+                  aoPressionar={() => setCategoria(c)}
+                />
               ))}
             </Linha>
           </Coluna>
         )}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espaco.sm }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: espaco.sm }}
+        >
           {dias.data?.dias.map((d) => {
             const p = partesData(d.data);
             const ativo = data === d.data;
@@ -155,7 +196,14 @@ export default function Agendar() {
                 key={d.data}
                 rotulo={`${p.semana} ${p.dia}/${p.mes}`}
                 selecionado={ativo}
-                aoPressionar={vazio ? undefined : () => { setData(d.data); setHorario(null); }}
+                aoPressionar={
+                  vazio
+                    ? undefined
+                    : () => {
+                        setData(d.data);
+                        setHorario(null);
+                      }
+                }
               />
             );
           })}
@@ -165,16 +213,30 @@ export default function Agendar() {
         ) : horarios.data?.length ? (
           <Linha style={{ flexWrap: 'wrap' }}>
             {horarios.data.map((h) => (
-              <Chip key={h.inicio} rotulo={hora(h.inicio)} selecionado={horario?.inicio === h.inicio} aoPressionar={() => setHorario(h)} />
+              <Chip
+                key={h.inicio}
+                rotulo={hora(h.inicio)}
+                selecionado={horario?.inicio === h.inicio}
+                aoPressionar={() => setHorario(h)}
+              />
             ))}
           </Linha>
         ) : (
           <Texto tipo="suave">Sem horários livres neste dia. Escolha outra data.</Texto>
         )}
         {remarcar ? (
-          <Botao titulo="Confirmar novo horário" desabilitado={!horario} carregando={enviando} aoPressionar={confirmarRemarcacao} />
+          <Botao
+            titulo="Confirmar novo horário"
+            desabilitado={!horario}
+            carregando={enviando}
+            aoPressionar={confirmarRemarcacao}
+          />
         ) : (
-          <Botao titulo="Continuar" desabilitado={!horario || !categoria} aoPressionar={() => setPasso('onde')} />
+          <Botao
+            titulo="Continuar"
+            desabilitado={!horario || !categoria}
+            aoPressionar={() => setPasso('onde')}
+          />
         )}
       </Tela>
     );
@@ -189,9 +251,17 @@ export default function Agendar() {
             style={{ flex: 1 }}
             userInterfaceStyle={escuro ? 'dark' : 'light'}
             showsUserLocation
-            initialRegion={{ latitude: ponto.lat, longitude: ponto.lng, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
+            initialRegion={{
+              latitude: ponto.lat,
+              longitude: ponto.lng,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
             onPress={async (e) => {
-              const p = { lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude };
+              const p = {
+                lat: e.nativeEvent.coordinate.latitude,
+                lng: e.nativeEvent.coordinate.longitude,
+              };
               setPonto(p);
               setEndereco(await enderecoDe(p));
             }}
@@ -201,7 +271,10 @@ export default function Agendar() {
               coordinate={{ latitude: ponto.lat, longitude: ponto.lng }}
               pinColor={cores.primaria}
               onDragEnd={async (e) => {
-                const p = { lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude };
+                const p = {
+                  lat: e.nativeEvent.coordinate.latitude,
+                  lng: e.nativeEvent.coordinate.longitude,
+                };
                 setPonto(p);
                 setEndereco(await enderecoDe(p));
               }}
@@ -210,18 +283,47 @@ export default function Agendar() {
         ) : (
           <Carregando texto="Carregando mapa..." />
         )}
-        <View style={{ padding: espaco.lg, gap: espaco.md, backgroundColor: cores.superficie, borderTopLeftRadius: raio.lg, borderTopRightRadius: raio.lg }}>
+        <View
+          style={{
+            padding: espaco.lg,
+            gap: espaco.md,
+            backgroundColor: cores.superficie,
+            borderTopLeftRadius: raio.lg,
+            borderTopRightRadius: raio.lg,
+          }}
+        >
           <Texto tipo="subtitulo">Ponto de encontro</Texto>
-          <Texto tipo="pequeno">Toque no mapa ou arraste o pino até o local onde o instrutor vai buscar você.</Texto>
+          <Texto tipo="pequeno">
+            Toque no mapa ou arraste o pino até o local onde o instrutor vai buscar você.
+          </Texto>
           {erro && <Aviso tipo="erro">{erro}</Aviso>}
-          <Campo rotulo="Endereço" value={endereco} onChangeText={setEndereco} onSubmitEditing={buscarEndereco} returnKeyType="search" />
-          <Campo rotulo="Referência (opcional)" value={referencia} onChangeText={setReferencia} placeholder="Ex.: em frente à padaria" />
+          <Campo
+            rotulo="Endereço"
+            value={endereco}
+            onChangeText={setEndereco}
+            onSubmitEditing={buscarEndereco}
+            returnKeyType="search"
+          />
+          <Campo
+            rotulo="Referência (opcional)"
+            value={referencia}
+            onChangeText={setReferencia}
+            placeholder="Ex.: em frente à padaria"
+          />
           <Linha>
             <View style={{ flex: 1 }}>
-              <Botao titulo="Voltar" variante="secundario" aoPressionar={() => setPasso('quando')} />
+              <Botao
+                titulo="Voltar"
+                variante="secundario"
+                aoPressionar={() => setPasso('quando')}
+              />
             </View>
             <View style={{ flex: 1 }}>
-              <Botao titulo="Continuar" desabilitado={!ponto} aoPressionar={() => setPasso('resumo')} />
+              <Botao
+                titulo="Continuar"
+                desabilitado={!ponto}
+                aoPressionar={() => setPasso('resumo')}
+              />
             </View>
           </Linha>
         </View>
@@ -239,7 +341,8 @@ export default function Agendar() {
         <Texto negrito>{i.nome}</Texto>
         <Texto tipo="rotulo">Quando</Texto>
         <Texto>
-          {horario && `${dataCurta(horario.inicio)}, das ${hora(horario.inicio)} às ${fimDoHorario}`}
+          {horario &&
+            `${dataCurta(horario.inicio)}, das ${hora(horario.inicio)} às ${fimDoHorario}`}
         </Texto>
         <Texto tipo="rotulo">Onde</Texto>
         <Texto>{endereco || 'Ponto marcado no mapa'}</Texto>
@@ -254,14 +357,21 @@ export default function Agendar() {
             {formatarCentavos(i.precoAulaCentavos)}
           </Texto>
         </Linha>
-        <Texto tipo="pequeno">Pagamento via Pix. O valor fica guardado e só é repassado ao instrutor depois da aula.</Texto>
+        <Texto tipo="pequeno">
+          Pagamento via Pix. O valor fica guardado e só é repassado ao instrutor depois da aula.
+        </Texto>
       </Cartao>
       {cfg && (
         <Aviso tipo="info" titulo="Regra de cancelamento">
           {`Cancelamento grátis até ${cfg.cancelamentoGratisAteHoras} horas antes da aula. Depois disso, há multa de ${cfg.cancelamentoMultaBp / 100}% do valor. Se o instrutor não aceitar ou cancelar, você recebe tudo de volta.`}
         </Aviso>
       )}
-      <Botao titulo="Ir para o pagamento" icone="qr-code" carregando={enviando} aoPressionar={confirmar} />
+      <Botao
+        titulo="Ir para o pagamento"
+        icone="qr-code"
+        carregando={enviando}
+        aoPressionar={confirmar}
+      />
       <Botao titulo="Voltar" variante="texto" aoPressionar={() => setPasso('onde')} />
     </Tela>
   );

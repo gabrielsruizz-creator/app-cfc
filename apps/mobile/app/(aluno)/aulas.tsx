@@ -15,18 +15,37 @@ export default function AulasAluno() {
   return (
     <Tela aoAtualizar={() => void q.refetch()} atualizando={q.isRefetching}>
       <Linha>
-        <Chip rotulo="Próximas" selecionado={filtro === 'proximas'} aoPressionar={() => setFiltro('proximas')} />
-        <Chip rotulo="Anteriores" selecionado={filtro === 'anteriores'} aoPressionar={() => setFiltro('anteriores')} />
+        <Chip
+          rotulo="Próximas"
+          selecionado={filtro === 'proximas'}
+          aoPressionar={() => setFiltro('proximas')}
+        />
+        <Chip
+          rotulo="Anteriores"
+          selecionado={filtro === 'anteriores'}
+          aoPressionar={() => setFiltro('anteriores')}
+        />
       </Linha>
       {q.isLoading ? (
         <Carregando />
       ) : q.data?.length ? (
-        q.data.map((a) => <CartaoAula key={a.id} aula={a} visao="aluno" aoPressionar={() => router.push(`/aula/${a.id}`)} />)
+        q.data.map((a) => (
+          <CartaoAula
+            key={a.id}
+            aula={a}
+            visao="aluno"
+            aoPressionar={() => router.push(`/aula/${a.id}`)}
+          />
+        ))
       ) : (
         <Vazio
           icone="calendar-outline"
           titulo={filtro === 'proximas' ? 'Nenhuma aula agendada' : 'Nenhuma aula anterior'}
-          acao={filtro === 'proximas' ? <Botao titulo="Encontrar instrutor" aoPressionar={() => router.push('/buscar')} /> : undefined}
+          acao={
+            filtro === 'proximas' ? (
+              <Botao titulo="Encontrar instrutor" aoPressionar={() => router.push('/buscar')} />
+            ) : undefined
+          }
         />
       )}
     </Tela>

@@ -7,13 +7,23 @@ import { useAuth } from '../src/servicos/AuthProvider';
 import { useTema } from '../src/tema/TemaProvider';
 import { dataHora } from '../src/util/formatos';
 
-type Notificacao = { id: string; titulo: string; corpo: string; lida: boolean; criadoEm: string; dados: { tela?: string; aulaId?: string } };
+type Notificacao = {
+  id: string;
+  titulo: string;
+  corpo: string;
+  lida: boolean;
+  criadoEm: string;
+  dados: { tela?: string; aulaId?: string };
+};
 
 export default function Notificacoes() {
   const { cores } = useTema();
   const { modo } = useAuth();
   const queryClient = useQueryClient();
-  const q = useQuery({ queryKey: ['notificacoes'], queryFn: () => api<Notificacao[]>('/notificacoes') });
+  const q = useQuery({
+    queryKey: ['notificacoes'],
+    queryFn: () => api<Notificacao[]>('/notificacoes'),
+  });
 
   useEffect(() => {
     if (q.data?.some((n) => !n.lida)) {
@@ -33,7 +43,12 @@ export default function Notificacoes() {
             style={!n.lida ? { borderColor: cores.primaria, borderWidth: 1.5 } : undefined}
             aoPressionar={
               n.dados.aulaId
-                ? () => router.push(modo === 'instrutor' ? `/area-instrutor/aula/${n.dados.aulaId}` : `/aula/${n.dados.aulaId}`)
+                ? () =>
+                    router.push(
+                      modo === 'instrutor'
+                        ? `/area-instrutor/aula/${n.dados.aulaId}`
+                        : `/aula/${n.dados.aulaId}`,
+                    )
                 : undefined
             }
           >

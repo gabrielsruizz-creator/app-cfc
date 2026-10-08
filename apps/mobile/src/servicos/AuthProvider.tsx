@@ -1,8 +1,17 @@
 import type { Eu, RespostaSessao } from '@volante/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { api, sessaoTokens } from './api';
+import { registrarPush } from './push';
 
 export type Modo = 'aluno' | 'instrutor';
 
@@ -39,6 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   }, []);
+
+  useEffect(() => {
+    if (eu?.id) void registrarPush();
+  }, [eu?.id]);
 
   useEffect(() => {
     sessaoTokens.aoExpirar(() => setEu(null));

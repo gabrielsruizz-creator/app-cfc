@@ -25,9 +25,18 @@ export default function AbasAluno() {
       }}
     >
       <Tabs.Screen name="inicio" options={{ title: 'Início', tabBarIcon: icone('home') }} />
-      <Tabs.Screen name="buscar" options={{ title: 'Instrutores', tabBarIcon: icone('search'), headerShown: false }} />
-      <Tabs.Screen name="autoescolas" options={{ title: 'Autoescolas', tabBarIcon: icone('business') }} />
-      <Tabs.Screen name="aulas" options={{ title: 'Minhas aulas', tabBarIcon: icone('calendar') }} />
+      <Tabs.Screen
+        name="buscar"
+        options={{ title: 'Instrutores', tabBarIcon: icone('search'), headerShown: false }}
+      />
+      <Tabs.Screen
+        name="autoescolas"
+        options={{ title: 'Autoescolas', tabBarIcon: icone('business') }}
+      />
+      <Tabs.Screen
+        name="aulas"
+        options={{ title: 'Minhas aulas', tabBarIcon: icone('calendar') }}
+      />
       <Tabs.Screen name="conta" options={{ title: 'Perfil', tabBarIcon: icone('person-circle') }} />
     </Tabs>
   );

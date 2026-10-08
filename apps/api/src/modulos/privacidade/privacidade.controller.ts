@@ -6,7 +6,10 @@ import { ZodPipe } from '../../nucleo/zod.pipe';
 import { PrivacidadeService } from './privacidade.service';
 
 const registrar = z.object({ finalidade: finalidadeConsentimento, aceito: z.boolean() });
-const exclusao = z.object({ motivo: z.string().max(500).optional(), confirmacao: z.literal('EXCLUIR') });
+const exclusao = z.object({
+  motivo: z.string().max(500).optional(),
+  confirmacao: z.literal('EXCLUIR'),
+});
 
 @Controller('privacidade')
 export class PrivacidadeController {

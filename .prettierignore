@@ -3,3 +3,6 @@ dist
 node_modules
 packages/db/migracoes/meta
 .expo
+*.sql
+apps/mobile/dist-teste
+.armazenamento

@@ -52,7 +52,11 @@ const sistema = <T>(fn: Parameters<typeof comAtor<T>>[2]) => comAtor(banco.db, A
 async function agendar(gateway: 'simulado' | 'nao_configurado', dias = 5) {
   const { instrutor, usuario: usuarioInstrutor } = await fabricarInstrutorAprovado(banco.db);
   const { aluno, usuario: usuarioAluno } = await fabricarAluno(banco.db);
-  const inicio = DateTime.now().setZone('America/Sao_Paulo').plus({ days: dias }).set({ hour: 9, minute: 0, second: 0, millisecond: 0 }).toJSDate();
+  const inicio = DateTime.now()
+    .setZone('America/Sao_Paulo')
+    .plus({ days: dias })
+    .set({ hour: 9, minute: 0, second: 0, millisecond: 0 })
+    .toJSDate();
   const r = await comAtor(banco.db, { tipo: 'aluno', alunoId: aluno.id }, (tx) =>
     solicitarAulaAvulsa(tx, {
       alunoId: aluno.id,
@@ -73,7 +77,9 @@ describe('outbox + gateway simulado', () => {
     const { cobranca, aula, usuarioInstrutor, usuarioAluno } = await agendar('simulado');
     await processarTudo(deps, CONSUMIDORES);
 
-    const [c] = await sistema((tx) => tx.select().from(cobrancas).where(eq(cobrancas.id, cobranca.id)));
+    const [c] = await sistema((tx) =>
+      tx.select().from(cobrancas).where(eq(cobrancas.id, cobranca.id)),
+    );
     expect(c!.status).toBe('aguardando_pagamento');
     expect(c!.pixCopiaCola).toContain('SIMULADO');
 
@@ -99,16 +105,24 @@ describe('outbox + gateway simulado', () => {
 
     const [a] = await sistema((tx) => tx.select().from(aulas).where(eq(aulas.id, aula.id)));
     expect(a!.status).toBe('solicitada');
-    const avisoInstrutor = await banco.db.select().from(notificacoes).where(eq(notificacoes.usuarioId, usuarioInstrutor.id));
+    const avisoInstrutor = await banco.db
+      .select()
+      .from(notificacoes)
+      .where(eq(notificacoes.usuarioId, usuarioInstrutor.id));
     expect(avisoInstrutor.map((n) => n.titulo)).toContain('Nova solicitação de aula');
-    const avisoAluno = await banco.db.select().from(notificacoes).where(eq(notificacoes.usuarioId, usuarioAluno.id));
+    const avisoAluno = await banco.db
+      .select()
+      .from(notificacoes)
+      .where(eq(notificacoes.usuarioId, usuarioAluno.id));
     expect(avisoAluno.map((n) => n.titulo)).toContain('Pagamento confirmado');
   });
 
   it('sem gateway configurado a cobrança fica pendente — nunca finge pagamento', async () => {
     const { cobranca, aula } = await agendar('nao_configurado', 6);
     await processarTudo(deps, CONSUMIDORES);
-    const [c] = await sistema((tx) => tx.select().from(cobrancas).where(eq(cobrancas.id, cobranca.id)));
+    const [c] = await sistema((tx) =>
+      tx.select().from(cobrancas).where(eq(cobrancas.id, cobranca.id)),
+    );
     expect(c!.status).toBe('pendente_configuracao');
     expect(c!.pixCopiaCola).toBeNull();
     const [a] = await sistema((tx) => tx.select().from(aulas).where(eq(aulas.id, aula.id)));
@@ -145,13 +159,20 @@ describe('rotinas', () => {
     await processarTudo(deps, CONSUMIDORES);
     const { confirmarPagamento } = await import('@volante/dominio');
     await sistema((tx) => confirmarPagamento(tx, cobranca.id));
-    await sistema((tx) => tx.update(aulas).set({ aceiteAte: new Date(Date.now() - 60_000) }).where(eq(aulas.id, aula.id)));
+    await sistema((tx) =>
+      tx
+        .update(aulas)
+        .set({ aceiteAte: new Date(Date.now() - 60_000) })
+        .where(eq(aulas.id, aula.id)),
+    );
 
     expect(await expirarSolicitacoesSemResposta(deps)).toBeGreaterThanOrEqual(1);
     const [a] = await sistema((tx) => tx.select().from(aulas).where(eq(aulas.id, aula.id)));
     expect(a!.status).toBe('expirada');
     await processarTudo(deps, CONSUMIDORES);
-    const [e] = await sistema((tx) => tx.select().from(estornos).where(eq(estornos.pedidoId, pedido.id)));
+    const [e] = await sistema((tx) =>
+      tx.select().from(estornos).where(eq(estornos.pedidoId, pedido.id)),
+    );
     expect(e!.status).toBe('concluido');
   });
 
@@ -161,19 +182,42 @@ describe('rotinas', () => {
     const hoje = new Date();
     const em = (d: number) => new Date(hoje.getTime() + d * 86400_000).toISOString().slice(0, 10);
     await banco.db.insert(instrutorDocumentos).values([
-      { instrutorId: instrutor.id, tipo: 'cnh', arquivoId: arq.id, validade: em(10), status: 'aprovado' },
-      { instrutorId: instrutor.id, tipo: 'credencial_detran', arquivoId: arq.id, validade: em(-1), status: 'aprovado' },
+      {
+        instrutorId: instrutor.id,
+        tipo: 'cnh',
+        arquivoId: arq.id,
+        validade: em(10),
+        status: 'aprovado',
+      },
+      {
+        instrutorId: instrutor.id,
+        tipo: 'credencial_detran',
+        arquivoId: arq.id,
+        validade: em(-1),
+        status: 'aprovado',
+      },
     ]);
     await verificarDocumentos(deps);
     const [i] = await banco.db.select().from(instrutores).where(eq(instrutores.id, instrutor.id));
     expect(i!.status).toBe('suspenso_documento');
     expect(i!.disponivel).toBe(false);
-    const docs = await banco.db.select().from(instrutorDocumentos).where(eq(instrutorDocumentos.instrutorId, instrutor.id));
-    expect(docs.find((d) => d.tipo === 'cnh')!.alertasEnviados).toEqual(expect.arrayContaining([15, 30]));
+    const docs = await banco.db
+      .select()
+      .from(instrutorDocumentos)
+      .where(eq(instrutorDocumentos.instrutorId, instrutor.id));
+    expect(docs.find((d) => d.tipo === 'cnh')!.alertasEnviados).toEqual(
+      expect.arrayContaining([15, 30]),
+    );
     // rodar de novo não duplica o alerta
-    const antes = await banco.db.select().from(outboxEventos).where(eq(outboxEventos.agregadoId, instrutor.id));
+    const antes = await banco.db
+      .select()
+      .from(outboxEventos)
+      .where(eq(outboxEventos.agregadoId, instrutor.id));
     await verificarDocumentos(deps);
-    const depois = await banco.db.select().from(outboxEventos).where(eq(outboxEventos.agregadoId, instrutor.id));
+    const depois = await banco.db
+      .select()
+      .from(outboxEventos)
+      .where(eq(outboxEventos.agregadoId, instrutor.id));
     expect(depois.length).toBe(antes.length);
   });
 });
@@ -182,7 +226,11 @@ describe('adaptador Asaas', () => {
   const respostas: Record<string, unknown> = {
     'POST /customers': { id: 'cus_1' },
     'POST /payments': { id: 'pay_1' },
-    'GET /payments/pay_1/pixQrCode': { encodedImage: 'QkFTRTY0', payload: '00020126PIXREAL', expirationDate: '2026-10-10' },
+    'GET /payments/pay_1/pixQrCode': {
+      encodedImage: 'QkFTRTY0',
+      payload: '00020126PIXREAL',
+      expirationDate: '2026-10-10',
+    },
   };
   const chamadas: string[] = [];
   const fetchFalso = (async (url: string, init?: RequestInit) => {
@@ -212,16 +260,30 @@ describe('adaptador Asaas', () => {
       descricao: 'Aula',
       pagador: { nome: 'A', cpf: '52998224725', email: 'a@a.com', telefone: '+5511999999999' },
     });
-    expect(r).toMatchObject({ status: 'ok', gatewayCobrancaId: 'pay_1', pixCopiaCola: '00020126PIXREAL' });
-    expect(chamadas).toEqual(['POST /customers', 'POST /payments', 'GET /payments/pay_1/pixQrCode']);
+    expect(r).toMatchObject({
+      status: 'ok',
+      gatewayCobrancaId: 'pay_1',
+      pixCopiaCola: '00020126PIXREAL',
+    });
+    expect(chamadas).toEqual([
+      'POST /customers',
+      'POST /payments',
+      'GET /payments/pay_1/pixQrCode',
+    ]);
   });
 
   it('só aceita webhook com o token configurado', () => {
     const g = new GatewayAsaas({ url: 'x', apiKey: 'k', webhookToken: 'segredo-webhook' });
     const payload = { event: 'PAYMENT_RECEIVED', payment: { id: 'pay_1' } };
-    expect(g.interpretarWebhook({ gateway: 'asaas', cabecalhos: {}, payload }).tipo).toBe('invalido');
+    expect(g.interpretarWebhook({ gateway: 'asaas', cabecalhos: {}, payload }).tipo).toBe(
+      'invalido',
+    );
     expect(
-      g.interpretarWebhook({ gateway: 'asaas', cabecalhos: { 'asaas-access-token': 'segredo-webhook' }, payload }),
+      g.interpretarWebhook({
+        gateway: 'asaas',
+        cabecalhos: { 'asaas-access-token': 'segredo-webhook' },
+        payload,
+      }),
     ).toEqual({ tipo: 'pagamento_confirmado', gatewayCobrancaId: 'pay_1' });
   });
 });

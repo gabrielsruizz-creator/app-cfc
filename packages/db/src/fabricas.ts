@@ -34,7 +34,10 @@ function cpfAleatorio(): string {
 export function cnpjAleatorio(): string {
   const base = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10));
   const dv = (nums: number[]) => {
-    const pesos = nums.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const pesos =
+      nums.length === 12
+        ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
     const r = nums.reduce((acc, n, i) => acc + n * pesos[i]!, 0) % 11;
     return r < 2 ? 0 : 11 - r;
   };
@@ -146,7 +149,10 @@ export async function fabricarInstrutorAprovado(
   return { usuario, instrutor };
 }
 
-export async function fabricarAutoescola(db: Db, dados: Partial<typeof autoescolas.$inferInsert> = {}) {
+export async function fabricarAutoescola(
+  db: Db,
+  dados: Partial<typeof autoescolas.$inferInsert> = {},
+) {
   const dono = await fabricarUsuario(db);
   const n = proximo();
   const autoescola = await comAtor(db, ATOR_SISTEMA, async (tx) => {
@@ -172,7 +178,9 @@ export async function fabricarAutoescola(db: Db, dados: Partial<typeof autoescol
         ...dados,
       })
       .returning();
-    await tx.insert(autoescolaMembros).values({ autoescolaId: a!.id, usuarioId: dono.id, papel: 'dono' });
+    await tx
+      .insert(autoescolaMembros)
+      .values({ autoescolaId: a!.id, usuarioId: dono.id, papel: 'dono' });
     return a!;
   });
   return { dono, autoescola };

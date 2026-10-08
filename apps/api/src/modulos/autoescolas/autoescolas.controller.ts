@@ -15,7 +15,10 @@ export class AutoescolasController {
   constructor(private readonly servico: AutoescolasService) {}
 
   @Post('autoescolas')
-  cadastrar(@SessaoAtual() s: Sessao, @Body(new ZodPipe(cadastroAutoescola)) dados: CadastroAutoescola) {
+  cadastrar(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(cadastroAutoescola)) dados: CadastroAutoescola,
+  ) {
     return this.servico.cadastrar(s, dados);
   }
 

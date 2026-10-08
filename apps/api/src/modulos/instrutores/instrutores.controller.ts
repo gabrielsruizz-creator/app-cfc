@@ -24,7 +24,10 @@ export class InstrutoresController {
   constructor(private readonly servico: InstrutoresService) {}
 
   @Post('perfil')
-  criar(@SessaoAtual() s: Sessao, @Body(new ZodPipe(perfilProfissional)) dados: PerfilProfissional) {
+  criar(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(perfilProfissional)) dados: PerfilProfissional,
+  ) {
     return this.servico.criarPerfil(s, dados);
   }
 
@@ -34,7 +37,10 @@ export class InstrutoresController {
   }
 
   @Put('perfil')
-  atualizar(@SessaoAtual() s: Sessao, @Body(new ZodPipe(perfilProfissional)) dados: PerfilProfissional) {
+  atualizar(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(perfilProfissional)) dados: PerfilProfissional,
+  ) {
     return this.servico.atualizarPerfil(s, atorInstrutor(s).instrutorId, dados);
   }
 
@@ -77,7 +83,10 @@ export class InstrutoresController {
   }
 
   @Put('jornada')
-  salvarJornada(@SessaoAtual() s: Sessao, @Body(new ZodPipe(jornadaSemanal)) dados: JornadaSemanal) {
+  salvarJornada(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(jornadaSemanal)) dados: JornadaSemanal,
+  ) {
     return this.servico.salvarJornada(atorInstrutor(s).instrutorId, dados);
   }
 

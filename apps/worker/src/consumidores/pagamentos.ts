@@ -46,7 +46,12 @@ export const criarCobrancaNoGateway: Consumidor = {
         valorCentavos: cobranca.valorCentavos,
         expiraEm: cobranca.pixExpiraEm ?? new Date(Date.now() + 30 * 60_000),
         descricao: `${pedido.snapshot.descricao} — pedido ${pedido.codigo}`,
-        pagador: { nome: usuario.nome, cpf: usuario.cpf, email: usuario.email, telefone: usuario.telefone },
+        pagador: {
+          nome: usuario.nome,
+          cpf: usuario.cpf,
+          email: usuario.email,
+          telefone: usuario.telefone,
+        },
       });
       if (r.status === 'ok') {
         await tx
@@ -68,7 +73,10 @@ export const criarCobrancaNoGateway: Consumidor = {
       } else if (r.reprocessar) {
         throw new ErroReprocessavel(r.motivo);
       } else {
-        await tx.update(cobrancas).set({ status: 'falhou', ultimoErro: r.motivo }).where(eq(cobrancas.id, cobranca.id));
+        await tx
+          .update(cobrancas)
+          .set({ status: 'falhou', ultimoErro: r.motivo })
+          .where(eq(cobrancas.id, cobranca.id));
       }
     });
   },
@@ -80,7 +88,10 @@ export const processarWebhookPagamento: Consumidor = {
   eventos: ['pagamento.webhook_recebido'],
   async executar(deps, evento) {
     const { webhookId } = payload<{ webhookId: string }>(evento);
-    const [w] = await deps.db.select().from(webhooksRecebidos).where(eq(webhooksRecebidos.id, webhookId));
+    const [w] = await deps.db
+      .select()
+      .from(webhooksRecebidos)
+      .where(eq(webhooksRecebidos.id, webhookId));
     if (!w || w.processadoEm) return;
     const interpretacao = gatewayDe(deps, w.gateway).interpretarWebhook({
       gateway: w.gateway,
@@ -93,7 +104,12 @@ export const processarWebhookPagamento: Consumidor = {
         const [c] = await tx
           .select()
           .from(cobrancas)
-          .where(and(eq(cobrancas.gateway, w.gateway), eq(cobrancas.gatewayCobrancaId, interpretacao.gatewayCobrancaId)));
+          .where(
+            and(
+              eq(cobrancas.gateway, w.gateway),
+              eq(cobrancas.gatewayCobrancaId, interpretacao.gatewayCobrancaId),
+            ),
+          );
         if (!c) {
           erro = 'Cobrança não encontrada';
           return;
@@ -123,10 +139,20 @@ export const executarEstorno: Consumidor = {
         .innerJoin(cobrancas, eq(cobrancas.id, estornos.cobrancaId))
         .where(eq(estornos.id, estornoId))
         .for('update', { of: estornos });
-      if (!linha || !['solicitado', 'pendente_configuracao', 'falhou'].includes(linha.estorno.status)) return;
+      if (
+        !linha ||
+        !['solicitado', 'pendente_configuracao', 'falhou'].includes(linha.estorno.status)
+      )
+        return;
       const { estorno, cobranca } = linha;
       if (!cobranca.gatewayCobrancaId) {
-        await tx.update(estornos).set({ status: 'pendente_configuracao', ultimoErro: 'Cobrança sem identificador no gateway' }).where(eq(estornos.id, estorno.id));
+        await tx
+          .update(estornos)
+          .set({
+            status: 'pendente_configuracao',
+            ultimoErro: 'Cobrança sem identificador no gateway',
+          })
+          .where(eq(estornos.id, estorno.id));
         return;
       }
       const r = await gatewayDe(deps, cobranca.gateway).estornar({
@@ -137,14 +163,25 @@ export const executarEstorno: Consumidor = {
       if (r.status === 'ok') {
         await tx
           .update(estornos)
-          .set({ status: 'concluido', gatewayEstornoId: r.gatewayEstornoId, concluidoEm: new Date(), ultimoErro: null })
+          .set({
+            status: 'concluido',
+            gatewayEstornoId: r.gatewayEstornoId,
+            concluidoEm: new Date(),
+            ultimoErro: null,
+          })
           .where(eq(estornos.id, estorno.id));
       } else if (r.status === 'pendente_configuracao') {
-        await tx.update(estornos).set({ status: 'pendente_configuracao', ultimoErro: r.motivo }).where(eq(estornos.id, estorno.id));
+        await tx
+          .update(estornos)
+          .set({ status: 'pendente_configuracao', ultimoErro: r.motivo })
+          .where(eq(estornos.id, estorno.id));
       } else if (r.reprocessar) {
         throw new ErroReprocessavel(r.motivo);
       } else {
-        await tx.update(estornos).set({ status: 'falhou', ultimoErro: r.motivo }).where(eq(estornos.id, estorno.id));
+        await tx
+          .update(estornos)
+          .set({ status: 'falhou', ultimoErro: r.motivo })
+          .where(eq(estornos.id, estorno.id));
       }
     });
   },
@@ -156,8 +193,13 @@ export const executarRepasse: Consumidor = {
   async executar(deps, evento) {
     const { repasseId } = payload<{ repasseId: string }>(evento);
     await comAtor(deps.db, ATOR_SISTEMA, async (tx) => {
-      const [repasse] = await tx.select().from(repasses).where(eq(repasses.id, repasseId)).for('update');
-      if (!repasse || !['pendente', 'pendente_configuracao', 'falhou'].includes(repasse.status)) return;
+      const [repasse] = await tx
+        .select()
+        .from(repasses)
+        .where(eq(repasses.id, repasseId))
+        .for('update');
+      if (!repasse || !['pendente', 'pendente_configuracao', 'falhou'].includes(repasse.status))
+        return;
       const [cobranca] = repasse.pedidoId
         ? await tx.select().from(cobrancas).where(eq(cobrancas.pedidoId, repasse.pedidoId)).limit(1)
         : [];
@@ -170,14 +212,24 @@ export const executarRepasse: Consumidor = {
       if (r.status === 'ok') {
         await tx
           .update(repasses)
-          .set({ status: 'concluido', gatewayTransferenciaId: r.gatewayTransferenciaId, ultimoErro: null })
+          .set({
+            status: 'concluido',
+            gatewayTransferenciaId: r.gatewayTransferenciaId,
+            ultimoErro: null,
+          })
           .where(eq(repasses.id, repasse.id));
       } else if (r.status === 'pendente_configuracao') {
-        await tx.update(repasses).set({ status: 'pendente_configuracao', ultimoErro: r.motivo }).where(eq(repasses.id, repasse.id));
+        await tx
+          .update(repasses)
+          .set({ status: 'pendente_configuracao', ultimoErro: r.motivo })
+          .where(eq(repasses.id, repasse.id));
       } else if (r.reprocessar) {
         throw new ErroReprocessavel(r.motivo);
       } else {
-        await tx.update(repasses).set({ status: 'falhou', ultimoErro: r.motivo }).where(eq(repasses.id, repasse.id));
+        await tx
+          .update(repasses)
+          .set({ status: 'falhou', ultimoErro: r.motivo })
+          .where(eq(repasses.id, repasse.id));
       }
     });
   },
@@ -188,7 +240,9 @@ export const cancelarCobrancaExpirada: Consumidor = {
   eventos: ['cobranca.expirada'],
   async executar(deps, evento) {
     const { cobrancaId } = payload<{ cobrancaId: string }>(evento);
-    const [c] = await comAtor(deps.db, ATOR_SISTEMA, (tx) => tx.select().from(cobrancas).where(eq(cobrancas.id, cobrancaId)));
+    const [c] = await comAtor(deps.db, ATOR_SISTEMA, (tx) =>
+      tx.select().from(cobrancas).where(eq(cobrancas.id, cobrancaId)),
+    );
     if (!c?.gatewayCobrancaId) return;
     const r = await gatewayDe(deps, c.gateway).cancelarCobranca(c.gatewayCobrancaId);
     if (r.status === 'erro' && r.reprocessar) throw new ErroReprocessavel(r.motivo);

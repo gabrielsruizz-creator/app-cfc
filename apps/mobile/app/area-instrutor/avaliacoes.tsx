@@ -3,10 +3,19 @@ import { Cartao, Carregando, Estrelas, Linha, Tela, Texto, Vazio } from '../../s
 import { api } from '../../src/servicos/api';
 import { dataCurta } from '../../src/util/formatos';
 
-type Avaliacao = { id: string; nota: number; comentario: string | null; criadoEm: string; status: string };
+type Avaliacao = {
+  id: string;
+  nota: number;
+  comentario: string | null;
+  criadoEm: string;
+  status: string;
+};
 
 export default function Avaliacoes() {
-  const q = useQuery({ queryKey: ['instrutor', 'avaliacoes'], queryFn: () => api<Avaliacao[]>('/instrutor/avaliacoes') });
+  const q = useQuery({
+    queryKey: ['instrutor', 'avaliacoes'],
+    queryFn: () => api<Avaliacao[]>('/instrutor/avaliacoes'),
+  });
   if (q.isLoading) return <Carregando />;
   return (
     <Tela aoAtualizar={() => void q.refetch()} atualizando={q.isRefetching}>

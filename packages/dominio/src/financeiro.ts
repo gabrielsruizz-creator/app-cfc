@@ -66,7 +66,11 @@ export async function regraComissaoVigente(
   const geral = candidatas.find((r) => !r.instrutorId && !r.autoescolaId);
   const regra = especifica ?? geral;
   if (!regra) {
-    throw new ErroDominio('comissao_nao_configurada', 'Regra de comissão não configurada', 'regra_negocio');
+    throw new ErroDominio(
+      'comissao_nao_configurada',
+      'Regra de comissão não configurada',
+      'regra_negocio',
+    );
   }
   return regra;
 }
@@ -167,9 +171,30 @@ export async function liberarValor(
     autoescolaId: pedido.autoescolaId,
   };
   await gravarOperacao(tx, [
-    { ...comum, contaId: vendedor.id, tipo: 'liberacao', bucket: 'retido', valorCentavos: -valorBrutoCentavos, descricao: opcoes.descricao },
-    { ...comum, contaId: vendedor.id, tipo: 'liberacao', bucket: 'disponivel', valorCentavos: liquido, descricao: opcoes.descricao },
-    { ...comum, contaId: plataforma.id, tipo: 'comissao', bucket: 'disponivel', valorCentavos: comissao, descricao: `Comissão — ${opcoes.descricao}` },
+    {
+      ...comum,
+      contaId: vendedor.id,
+      tipo: 'liberacao',
+      bucket: 'retido',
+      valorCentavos: -valorBrutoCentavos,
+      descricao: opcoes.descricao,
+    },
+    {
+      ...comum,
+      contaId: vendedor.id,
+      tipo: 'liberacao',
+      bucket: 'disponivel',
+      valorCentavos: liquido,
+      descricao: opcoes.descricao,
+    },
+    {
+      ...comum,
+      contaId: plataforma.id,
+      tipo: 'comissao',
+      bucket: 'disponivel',
+      valorCentavos: comissao,
+      descricao: `Comissão — ${opcoes.descricao}`,
+    },
   ]);
   const [repasse] = await tx
     .insert(repasses)
@@ -254,8 +279,22 @@ export async function estornarValor(
     autoescolaId: pedido.autoescolaId,
   };
   await gravarOperacao(tx, [
-    { ...comum, contaId: vendedor.id, tipo: 'estorno', bucket: 'retido', valorCentavos: -valorCentavos, descricao: `Estorno ao aluno — pedido ${pedido.codigo}` },
-    { ...comum, contaId: externa.id, tipo: 'estorno', bucket: 'movimento', valorCentavos, descricao: `Estorno ao aluno — pedido ${pedido.codigo}` },
+    {
+      ...comum,
+      contaId: vendedor.id,
+      tipo: 'estorno',
+      bucket: 'retido',
+      valorCentavos: -valorCentavos,
+      descricao: `Estorno ao aluno — pedido ${pedido.codigo}`,
+    },
+    {
+      ...comum,
+      contaId: externa.id,
+      tipo: 'estorno',
+      bucket: 'movimento',
+      valorCentavos,
+      descricao: `Estorno ao aluno — pedido ${pedido.codigo}`,
+    },
   ]);
   const novoTotal = cobrancaParcial.valorEstornadoCentavos + valorCentavos;
   await tx

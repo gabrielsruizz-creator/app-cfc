@@ -32,7 +32,12 @@ export async function expirarPixNaoPagos(deps: Dependencias, agora = new Date())
       .where(
         and(
           eq(aulas.status, 'aguardando_pagamento'),
-          inArray(cobrancas.status, ['pendente_envio', 'aguardando_pagamento', 'pendente_configuracao', 'falhou']),
+          inArray(cobrancas.status, [
+            'pendente_envio',
+            'aguardando_pagamento',
+            'pendente_configuracao',
+            'falhou',
+          ]),
           lt(cobrancas.pixExpiraEm, agora),
         ),
       ),
@@ -105,13 +110,23 @@ export async function verificarDocumentos(deps: Dependencias, agora = new Date()
     );
   let suspensos = 0;
   for (const doc of docs) {
-    const dias = Math.round((new Date(`${doc.validade}T00:00:00Z`).getTime() - new Date(`${hoje}T00:00:00Z`).getTime()) / 86400_000);
+    const dias = Math.round(
+      (new Date(`${doc.validade}T00:00:00Z`).getTime() - new Date(`${hoje}T00:00:00Z`).getTime()) /
+        86400_000,
+    );
     await comAtor(deps.db, ATOR_SISTEMA, async (tx) => {
       if (dias < 0) {
-        await tx.update(instrutorDocumentos).set({ status: 'vencido' }).where(eq(instrutorDocumentos.id, doc.id));
+        await tx
+          .update(instrutorDocumentos)
+          .set({ status: 'vencido' })
+          .where(eq(instrutorDocumentos.id, doc.id));
         const r = await tx
           .update(instrutores)
-          .set({ status: 'suspenso_documento', disponivel: false, motivoStatus: 'Documento vencido' })
+          .set({
+            status: 'suspenso_documento',
+            disponivel: false,
+            motivoStatus: 'Documento vencido',
+          })
           .where(and(eq(instrutores.id, doc.instrutorId), eq(instrutores.status, 'aprovado')))
           .returning();
         suspensos += r.length;
@@ -136,7 +151,13 @@ export async function verificarDocumentos(deps: Dependencias, agora = new Date()
         tipo: 'instrutor.documento_vencendo',
         agregadoTipo: 'instrutor',
         agregadoId: doc.instrutorId,
-        payload: { instrutorId: doc.instrutorId, documentoId: doc.id, tipo: doc.tipo, validade: doc.validade!, diasRestantes: dias },
+        payload: {
+          instrutorId: doc.instrutorId,
+          documentoId: doc.id,
+          tipo: doc.tipo,
+          validade: doc.validade!,
+          diasRestantes: dias,
+        },
       });
     });
   }

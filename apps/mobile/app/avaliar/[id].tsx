@@ -18,7 +18,9 @@ export default function Avaliar() {
     setEnviando(true);
     setErro(null);
     try {
-      await api(`/aluno/aulas/${id}/avaliacao`, { corpo: { nota, comentario: comentario.trim() || undefined } });
+      await api(`/aluno/aulas/${id}/avaliacao`, {
+        corpo: { nota, comentario: comentario.trim() || undefined },
+      });
       await queryClient.invalidateQueries({ queryKey: ['aula', id] });
       router.back();
     } catch (e) {
@@ -38,8 +40,19 @@ export default function Avaliar() {
         <Texto tipo="suave">{LEGENDAS[nota]}</Texto>
       </Coluna>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      <Campo rotulo="Comentário (opcional)" value={comentario} onChangeText={setComentario} multiline style={{ minHeight: 100, textAlignVertical: 'top', paddingTop: 12 }} />
-      <Botao titulo="Enviar avaliação" desabilitado={!nota} carregando={enviando} aoPressionar={enviar} />
+      <Campo
+        rotulo="Comentário (opcional)"
+        value={comentario}
+        onChangeText={setComentario}
+        multiline
+        style={{ minHeight: 100, textAlignVertical: 'top', paddingTop: 12 }}
+      />
+      <Botao
+        titulo="Enviar avaliação"
+        desabilitado={!nota}
+        carregando={enviando}
+        aoPressionar={enviar}
+      />
     </Tela>
   );
 }

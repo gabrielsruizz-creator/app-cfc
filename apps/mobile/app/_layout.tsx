@@ -30,9 +30,15 @@ function Navegacao() {
         <Stack.Screen name="completar-aluno" options={{ title: 'Seu perfil de aluno' }} />
         <Stack.Screen name="perfil-instrutor/[id]" options={{ title: 'Instrutor' }} />
         <Stack.Screen name="agendar/[instrutorId]" options={{ title: 'Agendar aula' }} />
-        <Stack.Screen name="pagamento/[aulaId]" options={{ title: 'Pagamento', gestureEnabled: false }} />
+        <Stack.Screen
+          name="pagamento/[aulaId]"
+          options={{ title: 'Pagamento', gestureEnabled: false }}
+        />
         <Stack.Screen name="aula/[id]" options={{ title: 'Aula' }} />
-        <Stack.Screen name="avaliar/[id]" options={{ title: 'Avaliar aula', presentation: 'modal' }} />
+        <Stack.Screen
+          name="avaliar/[id]"
+          options={{ title: 'Avaliar aula', presentation: 'modal' }}
+        />
         <Stack.Screen name="evolucao" options={{ title: 'Minha evolução' }} />
         <Stack.Screen name="recibos" options={{ title: 'Recibos' }} />
         <Stack.Screen name="notificacoes" options={{ title: 'Notificações' }} />

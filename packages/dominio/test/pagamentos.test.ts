@@ -77,7 +77,10 @@ async function somaGeralLancamentos() {
 
 async function saldosInstrutor(instrutorId: string) {
   return sistema(async (tx) => {
-    const [conta] = await tx.select().from(contasFinanceiras).where(eq(contasFinanceiras.instrutorId, instrutorId));
+    const [conta] = await tx
+      .select()
+      .from(contasFinanceiras)
+      .where(eq(contasFinanceiras.instrutorId, instrutorId));
     return conta ? saldosConta(tx, conta.id) : { retido: 0, disponivel: 0 };
   });
 }
@@ -129,7 +132,9 @@ describe('fluxo de aula avulsa com Pix', () => {
       let a = await carregarAulaParaAlterar(tx, aula.id);
       a = await mudarStatusAula(tx, a, 'confirmada');
       a = await mudarStatusAula(tx, a, 'em_andamento', { extras: { checkinEm: new Date() } });
-      await mudarStatusAula(tx, a, 'aguardando_confirmacao', { extras: { checkoutEm: new Date() } });
+      await mudarStatusAula(tx, a, 'aguardando_confirmacao', {
+        extras: { checkoutEm: new Date() },
+      });
     });
     await sistema((tx) => concluirAula(tx, aula.id, 'aluno'));
 
@@ -147,7 +152,9 @@ describe('fluxo de aula avulsa com Pix', () => {
       await encerrarComEstornoTotal(tx, a, 'recusada', { motivo: 'Imprevisto' });
     });
     expect(await saldosInstrutor(instrutor.id)).toEqual({ retido: 0, disponivel: 0 });
-    const [e] = await sistema((tx) => tx.select().from(estornos).where(eq(estornos.pedidoId, pedido.id)));
+    const [e] = await sistema((tx) =>
+      tx.select().from(estornos).where(eq(estornos.pedidoId, pedido.id)),
+    );
     expect(e!.valorCentavos).toBe(10000);
     const [p] = await sistema((tx) => tx.select().from(pedidos).where(eq(pedidos.id, pedido.id)));
     expect(p!.status).toBe('estornado');
@@ -167,7 +174,9 @@ describe('fluxo de aula avulsa com Pix', () => {
       const a = await carregarAulaParaAlterar(tx, aula.id);
       await cancelarAula(tx, a, { por: 'aluno', motivo: 'Não poderei ir', agora });
     });
-    const [e] = await sistema((tx) => tx.select().from(estornos).where(eq(estornos.pedidoId, pedido.id)));
+    const [e] = await sistema((tx) =>
+      tx.select().from(estornos).where(eq(estornos.pedidoId, pedido.id)),
+    );
     expect(e!.valorCentavos).toBe(5000);
     // multa de R$ 50 liberada ao instrutor com 15% de comissão
     expect(await saldosInstrutor(instrutor.id)).toEqual({ retido: 0, disponivel: 4250 });
@@ -183,7 +192,9 @@ describe('fluxo de aula avulsa com Pix', () => {
     await sistema((tx) => confirmarPagamento(tx, cobranca.id));
     const [p] = await sistema((tx) => tx.select().from(pedidos).where(eq(pedidos.id, pedido.id)));
     expect(p!.status).toBe('estornado');
-    const [c] = await sistema((tx) => tx.select().from(cobrancas).where(eq(cobrancas.id, cobranca.id)));
+    const [c] = await sistema((tx) =>
+      tx.select().from(cobrancas).where(eq(cobrancas.id, cobranca.id)),
+    );
     expect(c!.status).toBe('estornada');
     expect(await somaGeralLancamentos()).toBe(0);
   });

@@ -22,7 +22,10 @@ import { dataCurta, formatarCentavos } from '../../src/util/formatos';
 export default function PerfilInstrutor() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { cores } = useTema();
-  const q = useQuery({ queryKey: ['instrutor', id], queryFn: () => api<PerfilInstrutorPublico>(`/publico/instrutores/${id}`) });
+  const q = useQuery({
+    queryKey: ['instrutor', id],
+    queryFn: () => api<PerfilInstrutorPublico>(`/publico/instrutores/${id}`),
+  });
   if (q.isLoading || !q.data) return <Carregando />;
   const i = q.data;
   return (
@@ -36,7 +39,11 @@ export default function PerfilInstrutor() {
           <Selo texto="Credencial DETRAN verificada" icone="shield-checkmark" />
           <Linha>
             <Estrelas nota={i.notaMedia ?? 0} />
-            <Texto tipo="suave">{i.totalAvaliacoes ? `${i.notaMedia?.toFixed(1)} · ${i.totalAvaliacoes} avaliações` : 'Ainda sem avaliações'}</Texto>
+            <Texto tipo="suave">
+              {i.totalAvaliacoes
+                ? `${i.notaMedia?.toFixed(1)} · ${i.totalAvaliacoes} avaliações`
+                : 'Ainda sem avaliações'}
+            </Texto>
           </Linha>
         </Coluna>
         <Linha gap={12}>
@@ -79,7 +86,12 @@ export default function PerfilInstrutor() {
                   {v.cambio === 'automatico' ? 'Câmbio automático' : 'Câmbio manual'}
                   {v.cor ? ` · ${v.cor}` : ''}
                 </Texto>
-                {v.adaptadoPcd && <Selo texto={`Adaptado PcD${v.adaptacoes ? `: ${v.adaptacoes}` : ''}`} icone="accessibility" />}
+                {v.adaptadoPcd && (
+                  <Selo
+                    texto={`Adaptado PcD${v.adaptacoes ? `: ${v.adaptacoes}` : ''}`}
+                    icone="accessibility"
+                  />
+                )}
               </Cartao>
             ))
           ) : (
@@ -107,8 +119,19 @@ export default function PerfilInstrutor() {
           )}
         </Coluna>
       </Tela>
-      <View style={{ padding: 16, backgroundColor: cores.superficie, borderTopWidth: 1, borderTopColor: cores.borda }}>
-        <Botao titulo="Ver horários e agendar" icone="calendar" aoPressionar={() => router.push(`/agendar/${i.id}`)} />
+      <View
+        style={{
+          padding: 16,
+          backgroundColor: cores.superficie,
+          borderTopWidth: 1,
+          borderTopColor: cores.borda,
+        }}
+      >
+        <Botao
+          titulo="Ver horários e agendar"
+          icone="calendar"
+          aoPressionar={() => router.push(`/agendar/${i.id}`)}
+        />
       </View>
     </View>
   );

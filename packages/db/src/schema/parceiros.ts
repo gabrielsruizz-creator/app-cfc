@@ -45,7 +45,10 @@ export const instrutores = pgTable(
     aprovadoPor: uuid().references(() => usuarios.id),
     bio: text(),
     atuaDesde: smallint(),
-    categorias: text().array().notNull().default(sql`'{}'::text[]`),
+    categorias: text()
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     precoAulaCentavos: bigint({ mode: 'number' }),
     duracaoAulaMin: smallint().notNull().default(50),
     raioAtendimentoKm: smallint(),
@@ -66,7 +69,10 @@ export const instrutores = pgTable(
     uniqueIndex('instrutores_usuario_uk').on(t.usuarioId),
     checkValores('instrutores_status_ck', t.status, STATUS_INSTRUTOR),
     checkValores('instrutores_modo_ck', t.modoAtuacao, ['autonomo', 'vinculado', 'ambos']),
-    check('instrutores_preco_ck', sql`${t.precoAulaCentavos} is null or ${t.precoAulaCentavos} > 0`),
+    check(
+      'instrutores_preco_ck',
+      sql`${t.precoAulaCentavos} is null or ${t.precoAulaCentavos} > 0`,
+    ),
     index('instrutores_base_gix').using('gist', t.baseLocalizacao),
     index('instrutores_categorias_gin').using('gin', t.categorias),
     index('instrutores_busca_idx')
@@ -93,7 +99,10 @@ export const instrutorDocumentos = pgTable(
     analisadoPor: uuid().references(() => usuarios.id),
     analisadoEm: instanteTz(),
     motivoReprovacao: text(),
-    alertasEnviados: smallint().array().notNull().default(sql`'{}'::smallint[]`),
+    alertasEnviados: smallint()
+      .array()
+      .notNull()
+      .default(sql`'{}'::smallint[]`),
     ...carimbos,
   },
   (t) => [

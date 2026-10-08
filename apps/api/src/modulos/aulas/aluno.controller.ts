@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Headers, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import {
   avaliarAula,
   cancelarAula,
@@ -25,7 +35,10 @@ export class AlunoController {
   ) {}
 
   @Post('perfil')
-  criarPerfil(@SessaoAtual() s: Sessao, @Body(new ZodPipe(criarPerfilAluno)) dados: CriarPerfilAluno) {
+  criarPerfil(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(criarPerfilAluno)) dados: CriarPerfilAluno,
+  ) {
     return this.alunos.criarPerfil(s, dados);
   }
 
@@ -44,7 +57,11 @@ export class AlunoController {
     @Headers('idempotency-key') chave: string | undefined,
   ) {
     if (!chave || chave.length < 8) {
-      throw new ErroDominio('idempotencia_obrigatoria', 'Cabeçalho Idempotency-Key obrigatório', 'validacao');
+      throw new ErroDominio(
+        'idempotencia_obrigatoria',
+        'Cabeçalho Idempotency-Key obrigatório',
+        'validacao',
+      );
     }
     const ator = atorAluno(s);
     const aulaId = await this.aulas.solicitar(ator, dados, chave);
@@ -56,7 +73,14 @@ export class AlunoController {
     const ator = atorAluno(s);
     return filtro === 'anteriores'
       ? this.consulta.listar(ator, {
-          status: ['concluida', 'cancelada', 'recusada', 'expirada', 'nao_compareceu_aluno', 'nao_compareceu_instrutor'],
+          status: [
+            'concluida',
+            'cancelada',
+            'recusada',
+            'expirada',
+            'nao_compareceu_aluno',
+            'nao_compareceu_instrutor',
+          ],
           ordem: 'desc',
         })
       : this.consulta.listar(ator, { status: STATUS_PROXIMAS, ordem: 'asc' });

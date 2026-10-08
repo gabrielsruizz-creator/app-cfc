@@ -43,8 +43,14 @@ export class AdminService {
 
   async resumo(ator: Ator) {
     return this.banco.comAtor(ator, async (tx) => {
-      const [i] = await tx.select({ n: count() }).from(instrutores).where(eq(instrutores.status, 'em_analise'));
-      const [a] = await tx.select({ n: count() }).from(autoescolas).where(eq(autoescolas.status, 'em_analise'));
+      const [i] = await tx
+        .select({ n: count() })
+        .from(instrutores)
+        .where(eq(instrutores.status, 'em_analise'));
+      const [a] = await tx
+        .select({ n: count() })
+        .from(autoescolas)
+        .where(eq(autoescolas.status, 'em_analise'));
       const [o] = await tx
         .select({ n: count() })
         .from(outboxEventos)
@@ -93,22 +99,44 @@ export class AdminService {
     const docs = await this.banco.db
       .select()
       .from(instrutorDocumentos)
-      .where(and(eq(instrutorDocumentos.instrutorId, instrutorId), ne(instrutorDocumentos.status, 'substituido')))
+      .where(
+        and(
+          eq(instrutorDocumentos.instrutorId, instrutorId),
+          ne(instrutorDocumentos.status, 'substituido'),
+        ),
+      )
       .orderBy(instrutorDocumentos.tipo);
-    const vs = await this.banco.db.select().from(veiculos).where(and(eq(veiculos.instrutorId, instrutorId), eq(veiculos.ativo, true)));
+    const vs = await this.banco.db
+      .select()
+      .from(veiculos)
+      .where(and(eq(veiculos.instrutorId, instrutorId), eq(veiculos.ativo, true)));
     const { senhaHash: _s, ...usuario } = linha.usuario;
     return { instrutor: linha.instrutor, usuario, documentos: docs, veiculos: vs };
   }
 
-  async analisarDocumentoInstrutor(ator: Ator, instrutorId: string, documentoId: string, aprovado: boolean, motivo?: string) {
+  async analisarDocumentoInstrutor(
+    ator: Ator,
+    instrutorId: string,
+    documentoId: string,
+    aprovado: boolean,
+    motivo?: string,
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
       const [doc] = await tx
         .select()
         .from(instrutorDocumentos)
-        .where(and(eq(instrutorDocumentos.id, documentoId), eq(instrutorDocumentos.instrutorId, instrutorId)))
+        .where(
+          and(
+            eq(instrutorDocumentos.id, documentoId),
+            eq(instrutorDocumentos.instrutorId, instrutorId),
+          ),
+        )
         .for('update');
       if (!doc) throw naoEncontrado('documento');
-      const depois = { status: aprovado ? 'aprovado' : 'reprovado', motivoReprovacao: aprovado ? null : motivo };
+      const depois = {
+        status: aprovado ? 'aprovado' : 'reprovado',
+        motivoReprovacao: aprovado ? null : motivo,
+      };
       await tx
         .update(instrutorDocumentos)
         .set({ ...depois, analisadoPor: ator.usuarioId, analisadoEm: new Date() })
@@ -126,30 +154,58 @@ export class AdminService {
     return this.detalheInstrutor(instrutorId);
   }
 
-  async decidirInstrutor(ator: Ator, instrutorId: string, decisao: 'aprovar' | 'reprovar' | 'bloquear', motivo?: string) {
+  async decidirInstrutor(
+    ator: Ator,
+    instrutorId: string,
+    decisao: 'aprovar' | 'reprovar' | 'bloquear',
+    motivo?: string,
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
-      const [i] = await tx.select().from(instrutores).where(eq(instrutores.id, instrutorId)).for('update');
+      const [i] = await tx
+        .select()
+        .from(instrutores)
+        .where(eq(instrutores.id, instrutorId))
+        .for('update');
       if (!i) throw naoEncontrado('instrutor');
       if (decisao === 'aprovar') {
         if (!['em_analise'].includes(i.status)) {
-          throw new ErroDominio('status_invalido', 'Só é possível aprovar cadastros em análise', 'conflito');
+          throw new ErroDominio(
+            'status_invalido',
+            'Só é possível aprovar cadastros em análise',
+            'conflito',
+          );
         }
         const docs = await tx
           .select()
           .from(instrutorDocumentos)
-          .where(and(eq(instrutorDocumentos.instrutorId, instrutorId), ne(instrutorDocumentos.status, 'substituido')));
-        const faltando = TIPOS_DOCUMENTO_INSTRUTOR.filter((t) => !docs.some((d) => d.tipo === t && d.status === 'aprovado'));
+          .where(
+            and(
+              eq(instrutorDocumentos.instrutorId, instrutorId),
+              ne(instrutorDocumentos.status, 'substituido'),
+            ),
+          );
+        const faltando = TIPOS_DOCUMENTO_INSTRUTOR.filter(
+          (t) => !docs.some((d) => d.tipo === t && d.status === 'aprovado'),
+        );
         if (faltando.length) {
-          throw new ErroDominio('documentos_pendentes', 'Aprove todos os documentos antes de aprovar o cadastro', 'regra_negocio', { faltando });
+          throw new ErroDominio(
+            'documentos_pendentes',
+            'Aprove todos os documentos antes de aprovar o cadastro',
+            'regra_negocio',
+            { faltando },
+          );
         }
       }
-      const novoStatus = decisao === 'aprovar' ? 'aprovado' : decisao === 'reprovar' ? 'reprovado' : 'bloqueado';
+      const novoStatus =
+        decisao === 'aprovar' ? 'aprovado' : decisao === 'reprovar' ? 'reprovado' : 'bloqueado';
       await tx
         .update(instrutores)
         .set({
           status: novoStatus,
           motivoStatus: motivo ?? null,
-          ...(decisao === 'aprovar' ? { aprovadoEm: new Date(), aprovadoPor: ator.usuarioId } : { disponivel: false }),
+          ...(decisao === 'aprovar'
+            ? { aprovadoEm: new Date(), aprovadoPor: ator.usuarioId }
+            : { disponivel: false }),
         })
         .where(eq(instrutores.id, instrutorId));
       await auditar(tx, {
@@ -161,7 +217,12 @@ export class AdminService {
         depois: { status: novoStatus },
         motivo,
       });
-      const tipo = decisao === 'aprovar' ? 'instrutor.aprovado' : decisao === 'reprovar' ? 'instrutor.reprovado' : 'instrutor.bloqueado';
+      const tipo =
+        decisao === 'aprovar'
+          ? 'instrutor.aprovado'
+          : decisao === 'reprovar'
+            ? 'instrutor.reprovado'
+            : 'instrutor.bloqueado';
       await publicarEvento(tx, {
         tipo,
         agregadoTipo: 'instrutor',
@@ -200,12 +261,23 @@ export class AdminService {
       const docs = await tx
         .select()
         .from(autoescolaDocumentos)
-        .where(and(eq(autoescolaDocumentos.autoescolaId, id), ne(autoescolaDocumentos.status, 'substituido')));
+        .where(
+          and(
+            eq(autoescolaDocumentos.autoescolaId, id),
+            ne(autoescolaDocumentos.status, 'substituido'),
+          ),
+        );
       return { autoescola: a, documentos: docs };
     });
   }
 
-  async analisarDocumentoAutoescola(ator: Ator, autoescolaId: string, documentoId: string, aprovado: boolean, motivo?: string) {
+  async analisarDocumentoAutoescola(
+    ator: Ator,
+    autoescolaId: string,
+    documentoId: string,
+    aprovado: boolean,
+    motivo?: string,
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
       const r = await tx
         .update(autoescolaDocumentos)
@@ -215,7 +287,12 @@ export class AdminService {
           analisadoPor: ator.usuarioId,
           analisadoEm: new Date(),
         })
-        .where(and(eq(autoescolaDocumentos.id, documentoId), eq(autoescolaDocumentos.autoescolaId, autoescolaId)))
+        .where(
+          and(
+            eq(autoescolaDocumentos.id, documentoId),
+            eq(autoescolaDocumentos.autoescolaId, autoescolaId),
+          ),
+        )
         .returning();
       if (!r.length) throw naoEncontrado('documento');
       await auditar(tx, {
@@ -230,21 +307,40 @@ export class AdminService {
     return this.detalheAutoescola(ator, autoescolaId);
   }
 
-  async decidirAutoescola(ator: Ator, id: string, decisao: 'aprovar' | 'reprovar' | 'suspender', motivo?: string) {
+  async decidirAutoescola(
+    ator: Ator,
+    id: string,
+    decisao: 'aprovar' | 'reprovar' | 'suspender',
+    motivo?: string,
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
       const [a] = await tx.select().from(autoescolas).where(eq(autoescolas.id, id)).for('update');
       if (!a) throw naoEncontrado('autoescola');
       if (decisao === 'aprovar') {
-        if (a.status !== 'em_analise') throw new ErroDominio('status_invalido', 'Só é possível aprovar cadastros em análise', 'conflito');
+        if (a.status !== 'em_analise')
+          throw new ErroDominio(
+            'status_invalido',
+            'Só é possível aprovar cadastros em análise',
+            'conflito',
+          );
         const docs = await tx
           .select()
           .from(autoescolaDocumentos)
-          .where(and(eq(autoescolaDocumentos.autoescolaId, id), ne(autoescolaDocumentos.status, 'substituido')));
+          .where(
+            and(
+              eq(autoescolaDocumentos.autoescolaId, id),
+              ne(autoescolaDocumentos.status, 'substituido'),
+            ),
+          );
         if (docs.length === 0 || docs.some((d) => d.status !== 'aprovado')) {
-          throw new ErroDominio('documentos_pendentes', 'Aprove todos os documentos antes de aprovar o cadastro');
+          throw new ErroDominio(
+            'documentos_pendentes',
+            'Aprove todos os documentos antes de aprovar o cadastro',
+          );
         }
       }
-      const novo = decisao === 'aprovar' ? 'aprovada' : decisao === 'reprovar' ? 'reprovada' : 'suspensa';
+      const novo =
+        decisao === 'aprovar' ? 'aprovada' : decisao === 'reprovar' ? 'reprovada' : 'suspensa';
       await tx
         .update(autoescolas)
         .set({
@@ -279,7 +375,11 @@ export class AdminService {
   // ---------- Comissões e configurações ----------
 
   async comissoes() {
-    return this.banco.db.select().from(regrasComissao).orderBy(desc(regrasComissao.vigenteDesde)).limit(200);
+    return this.banco.db
+      .select()
+      .from(regrasComissao)
+      .orderBy(desc(regrasComissao.vigenteDesde))
+      .limit(200);
   }
 
   async novaComissao(ator: Ator, d: NovaRegraComissao) {
@@ -321,7 +421,11 @@ export class AdminService {
         entidadeTipo: 'regra_comissao',
         entidadeId: nova!.id,
         acao: 'comissao.alterada',
-        antes: encerradas.map((e) => ({ id: e.id, percentualBp: e.percentualBp, valorFixoCentavos: e.valorFixoCentavos })),
+        antes: encerradas.map((e) => ({
+          id: e.id,
+          percentualBp: e.percentualBp,
+          valorFixoCentavos: e.valorFixoCentavos,
+        })),
         depois: { percentualBp: nova!.percentualBp, valorFixoCentavos: nova!.valorFixoCentavos },
         motivo: d.motivo,
       });
@@ -347,7 +451,10 @@ export class AdminService {
         await tx
           .insert(configuracoes)
           .values({ chave, valor, atualizadoPor: ator.usuarioId })
-          .onConflictDoUpdate({ target: configuracoes.chave, set: { valor, atualizadoPor: ator.usuarioId, atualizadoEm: new Date() } });
+          .onConflictDoUpdate({
+            target: configuracoes.chave,
+            set: { valor, atualizadoPor: ator.usuarioId, atualizadoEm: new Date() },
+          });
         await auditar(tx, {
           ator,
           entidadeTipo: 'configuracao',
@@ -361,17 +468,37 @@ export class AdminService {
     return this.configuracoes();
   }
 
-  async publicarDocumentoLegal(ator: Ator, d: { tipo: string; versao: string; conteudoMd: string }) {
+  async publicarDocumentoLegal(
+    ator: Ator,
+    d: { tipo: string; versao: string; conteudoMd: string },
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
-      await tx.update(documentosLegais).set({ vigente: false }).where(eq(documentosLegais.tipo, d.tipo));
-      const [doc] = await tx.insert(documentosLegais).values({ ...d, vigente: true }).returning();
-      await auditar(tx, { ator, entidadeTipo: 'documento_legal', entidadeId: doc!.id, acao: 'documento_legal.publicado', depois: { tipo: d.tipo, versao: d.versao } });
+      await tx
+        .update(documentosLegais)
+        .set({ vigente: false })
+        .where(eq(documentosLegais.tipo, d.tipo));
+      const [doc] = await tx
+        .insert(documentosLegais)
+        .values({ ...d, vigente: true })
+        .returning();
+      await auditar(tx, {
+        ator,
+        entidadeTipo: 'documento_legal',
+        entidadeId: doc!.id,
+        acao: 'documento_legal.publicado',
+        depois: { tipo: d.tipo, versao: d.versao },
+      });
     });
   }
 
   // ---------- Auditoria e operações ----------
 
-  async auditoria(f: { entidadeTipo?: string; entidadeId?: string; atorUsuarioId?: string; limite: number }) {
+  async auditoria(f: {
+    entidadeTipo?: string;
+    entidadeId?: string;
+    atorUsuarioId?: string;
+    limite: number;
+  }) {
     const condicoes = [];
     if (f.entidadeTipo) condicoes.push(eq(registrosAuditoria.entidadeTipo, f.entidadeTipo));
     if (f.entidadeId) condicoes.push(eq(registrosAuditoria.entidadeId, f.entidadeId));
@@ -424,10 +551,17 @@ export class AdminService {
       const r = await tx
         .update(outboxEventos)
         .set({ status: 'pendente', proximaTentativaEm: new Date(), ultimoErro: null })
-        .where(and(eq(outboxEventos.id, eventoId), inArray(outboxEventos.status, ['falhou', 'morto'])))
+        .where(
+          and(eq(outboxEventos.id, eventoId), inArray(outboxEventos.status, ['falhou', 'morto'])),
+        )
         .returning();
       if (!r.length) throw naoEncontrado('evento');
-      await auditar(tx, { ator, entidadeTipo: 'outbox_evento', entidadeId: eventoId, acao: 'evento.reprocessado' });
+      await auditar(tx, {
+        ator,
+        entidadeTipo: 'outbox_evento',
+        entidadeId: eventoId,
+        acao: 'evento.reprocessado',
+      });
     });
   }
 }

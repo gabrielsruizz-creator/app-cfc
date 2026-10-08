@@ -33,7 +33,8 @@ export class FiltroErros implements ExceptionFilter {
     if (erro instanceof HttpException) {
       const status = erro.getStatus();
       const corpo = erro.getResponse();
-      if (typeof corpo === 'object' && corpo && 'codigo' in corpo) return resposta.status(status).json(corpo);
+      if (typeof corpo === 'object' && corpo && 'codigo' in corpo)
+        return resposta.status(status).json(corpo);
       const mensagens: Record<number, [string, string]> = {
         401: ['nao_autenticado', 'Faça login para continuar'],
         403: ['acesso_negado', 'Você não tem permissão para esta ação'],
@@ -46,14 +47,17 @@ export class FiltroErros implements ExceptionFilter {
     }
     const pg = codigoErroPostgres(erro);
     if (pg.code === '23505') {
-      return resposta
-        .status(HttpStatus.CONFLICT)
-        .json({ codigo: 'duplicado', mensagem: 'Registro já existe', detalhes: { restricao: pg.constraint } });
+      return resposta.status(HttpStatus.CONFLICT).json({
+        codigo: 'duplicado',
+        mensagem: 'Registro já existe',
+        detalhes: { restricao: pg.constraint },
+      });
     }
     if (pg.code === '23P01') {
-      return resposta
-        .status(HttpStatus.CONFLICT)
-        .json({ codigo: 'horario_indisponivel', mensagem: 'Esse horário não está mais disponível.' });
+      return resposta.status(HttpStatus.CONFLICT).json({
+        codigo: 'horario_indisponivel',
+        mensagem: 'Esse horário não está mais disponível.',
+      });
     }
     this.log.error(erro instanceof Error ? erro.stack : String(erro));
     return resposta

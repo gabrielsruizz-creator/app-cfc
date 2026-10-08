@@ -1,4 +1,14 @@
-import { Body, Controller, ForbiddenException, Headers, HttpCode, Inject, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Headers,
+  HttpCode,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { cobrancas, eq, publicarEvento, webhooksRecebidos } from '@volante/db';
 import { ErroDominio, naoEncontrado } from '@volante/dominio';
 import { createHash } from 'node:crypto';
@@ -32,16 +42,28 @@ export class PagamentosController {
     return { recebido: true };
   }
 
-  private async registrarWebhook(gateway: string, corpo: Record<string, unknown>, cabecalhos: Record<string, string>) {
+  private async registrarWebhook(
+    gateway: string,
+    corpo: Record<string, unknown>,
+    cabecalhos: Record<string, string>,
+  ) {
     const idExterno =
-      typeof corpo.id === 'string' ? corpo.id : createHash('sha256').update(JSON.stringify(corpo)).digest('hex');
+      typeof corpo.id === 'string'
+        ? corpo.id
+        : createHash('sha256').update(JSON.stringify(corpo)).digest('hex');
     const relevantes = Object.fromEntries(
       Object.entries(cabecalhos).filter(([k]) => /token|signature|assinatura|x-/i.test(k)),
     );
     await this.banco.comAtor({ tipo: 'sistema' }, async (tx) => {
       const [w] = await tx
         .insert(webhooksRecebidos)
-        .values({ gateway, eventoExternoId: idExterno, tipo: String(corpo.event ?? corpo.evento ?? ''), cabecalhos: relevantes, payload: corpo })
+        .values({
+          gateway,
+          eventoExternoId: idExterno,
+          tipo: String(corpo.event ?? corpo.evento ?? ''),
+          cabecalhos: relevantes,
+          payload: corpo,
+        })
         .onConflictDoNothing()
         .returning({ id: webhooksRecebidos.id });
       if (w) {
@@ -63,16 +85,30 @@ export class PagamentosController {
   @Post('dev/cobrancas/:id/simular-pagamento')
   async simularPagamento(@SessaoAtual() s: Sessao, @Param('id', ParseUUIDPipe) id: string) {
     if (this.config.PAGAMENTO_GATEWAY !== 'simulado' || this.config.NODE_ENV === 'production') {
-      throw new ForbiddenException({ codigo: 'indisponivel', mensagem: 'Simulação disponível apenas em ambiente de teste' });
+      throw new ForbiddenException({
+        codigo: 'indisponivel',
+        mensagem: 'Simulação disponível apenas em ambiente de teste',
+      });
     }
-    const [c] = await this.banco.comAtor(atorAluno(s), (tx) => tx.select().from(cobrancas).where(eq(cobrancas.id, id)));
+    const [c] = await this.banco.comAtor(atorAluno(s), (tx) =>
+      tx.select().from(cobrancas).where(eq(cobrancas.id, id)),
+    );
     if (!c) throw naoEncontrado('cobranca');
     if (c.gateway !== 'simulado' || !c.gatewayCobrancaId) {
-      throw new ErroDominio('cobranca_nao_pronta', 'A cobrança ainda está sendo gerada. Tente em alguns segundos.', 'conflito');
+      throw new ErroDominio(
+        'cobranca_nao_pronta',
+        'A cobrança ainda está sendo gerada. Tente em alguns segundos.',
+        'conflito',
+      );
     }
     await this.registrarWebhook(
       'simulado',
-      { id: `sim_${c.id}`, evento: 'PAGAMENTO_CONFIRMADO', cobrancaGatewayId: c.gatewayCobrancaId, valorCentavos: c.valorCentavos },
+      {
+        id: `sim_${c.id}`,
+        evento: 'PAGAMENTO_CONFIRMADO',
+        cobrancaGatewayId: c.gatewayCobrancaId,
+        valorCentavos: c.valorCentavos,
+      },
       {},
     );
     return { simulado: true };

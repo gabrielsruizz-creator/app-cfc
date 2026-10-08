@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import {
   atualizarConfiguracoes,
   filtroAuditoria,
@@ -140,7 +150,10 @@ export class AdminController {
   }
 
   @Post('comissoes')
-  novaComissao(@SessaoAtual() s: Sessao, @Body(new ZodPipe(novaRegraComissao)) d: NovaRegraComissao) {
+  novaComissao(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(novaRegraComissao)) d: NovaRegraComissao,
+  ) {
     return this.servico.novaComissao(atorAdmin(s), d);
   }
 
@@ -162,7 +175,8 @@ export class AdminController {
   @Post('documentos-legais')
   async documentoLegal(
     @SessaoAtual() s: Sessao,
-    @Body(new ZodPipe(publicarDocumentoLegal)) d: { tipo: string; versao: string; conteudoMd: string },
+    @Body(new ZodPipe(publicarDocumentoLegal))
+    d: { tipo: string; versao: string; conteudoMd: string },
   ) {
     await this.servico.publicarDocumentoLegal(atorAdmin(s), d);
   }

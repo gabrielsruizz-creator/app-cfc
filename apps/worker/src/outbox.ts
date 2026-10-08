@@ -37,11 +37,20 @@ async function reservarLote(db: Db, limite: number): Promise<Evento[]> {
   return db
     .select()
     .from(outboxEventos)
-    .where(sql`${outboxEventos.id} in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})`)
+    .where(
+      sql`${outboxEventos.id} in (${sql.join(
+        ids.map((i) => sql`${i}`),
+        sql`, `,
+      )})`,
+    )
     .orderBy(outboxEventos.id);
 }
 
-export async function processarLote(deps: Dependencias, consumidores: Consumidor[], limite = 20): Promise<number> {
+export async function processarLote(
+  deps: Dependencias,
+  consumidores: Consumidor[],
+  limite = 20,
+): Promise<number> {
   const { db } = deps;
   const lote = await reservarLote(db, limite);
   for (const evento of lote) {
@@ -53,7 +62,10 @@ export async function processarLote(deps: Dependencias, consumidores: Consumidor
         );
         if (ja.rows.length) continue;
         await c.executar(deps, evento);
-        await db.insert(eventosConsumidos).values({ eventoId: evento.id, consumidor: c.nome }).onConflictDoNothing();
+        await db
+          .insert(eventosConsumidos)
+          .values({ eventoId: evento.id, consumidor: c.nome })
+          .onConflictDoNothing();
       }
       await db
         .update(outboxEventos)

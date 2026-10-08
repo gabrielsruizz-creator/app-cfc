@@ -71,11 +71,21 @@ export const aulaDetalhe = aulaResumo.extend({
   cobranca: resumoCobranca.nullable(),
   historico: z.array(eventoAula),
   veiculo: z
-    .object({ marca: z.string(), modelo: z.string(), cor: z.string().nullable(), cambio: z.string() })
+    .object({
+      marca: z.string(),
+      modelo: z.string(),
+      cor: z.string().nullable(),
+      cambio: z.string(),
+    })
     .nullable(),
   anotacao: z.string().nullable(),
   evolucao: z.array(
-    z.object({ habilidadeId: id, habilidade: z.string(), nivel: z.number(), observacao: z.string().nullable() }),
+    z.object({
+      habilidadeId: id,
+      habilidade: z.string(),
+      nivel: z.number(),
+      observacao: z.string().nullable(),
+    }),
   ),
 });
 export type AulaDetalhe = z.infer<typeof aulaDetalhe>;

@@ -30,8 +30,12 @@ export class AlunosService {
   ) {}
 
   async criarPerfil(sessao: Sessao, dados: CriarPerfilAluno) {
-    if (sessao.alunoId) throw new ErroDominio('perfil_existente', 'Você já tem cadastro de aluno', 'conflito');
-    const [u] = await this.banco.db.select().from(usuarios).where(eq(usuarios.id, sessao.usuarioId));
+    if (sessao.alunoId)
+      throw new ErroDominio('perfil_existente', 'Você já tem cadastro de aluno', 'conflito');
+    const [u] = await this.banco.db
+      .select()
+      .from(usuarios)
+      .where(eq(usuarios.id, sessao.usuarioId));
     if (!u?.cpf) throw new ErroDominio('cpf_obrigatorio', 'Informe seu CPF para continuar');
     await this.arquivos.exigirDono(dados.selfieArquivoId, sessao.usuarioId);
     const [a] = await this.banco.db
@@ -75,7 +79,10 @@ export class AlunosService {
       const [aluno] = await tx.select().from(alunos).where(eq(alunos.id, alunoId));
       if (!aluno) throw naoEncontrado('aluno');
       const condicao = filtroInstrutorId
-        ? and(eq(registrosEvolucao.alunoId, alunoId), eq(registrosEvolucao.instrutorId, filtroInstrutorId))
+        ? and(
+            eq(registrosEvolucao.alunoId, alunoId),
+            eq(registrosEvolucao.instrutorId, filtroInstrutorId),
+          )
         : eq(registrosEvolucao.alunoId, alunoId);
       const registros = await tx
         .select({
@@ -90,7 +97,10 @@ export class AlunosService {
         .innerJoin(aulas, eq(aulas.id, registrosEvolucao.aulaId))
         .where(condicao)
         .orderBy(aulas.inicio);
-      const porHabilidade = new Map<string, EvolucaoAluno['habilidades'][number] & { ordem: number }>();
+      const porHabilidade = new Map<
+        string,
+        EvolucaoAluno['habilidades'][number] & { ordem: number }
+      >();
       for (const r of registros) {
         const h = porHabilidade.get(r.habilidadeId) ?? {
           habilidadeId: r.habilidadeId,
@@ -104,7 +114,13 @@ export class AlunosService {
         porHabilidade.set(r.habilidadeId, h);
       }
       const anotacoes = await tx
-        .select({ aulaId: aulaAnotacoes.aulaId, texto: aulaAnotacoes.texto, data: aulas.inicio, instrutor: usuarios.nome, visivel: aulaAnotacoes.visivelAluno })
+        .select({
+          aulaId: aulaAnotacoes.aulaId,
+          texto: aulaAnotacoes.texto,
+          data: aulas.inicio,
+          instrutor: usuarios.nome,
+          visivel: aulaAnotacoes.visivelAluno,
+        })
         .from(aulaAnotacoes)
         .innerJoin(aulas, eq(aulas.id, aulaAnotacoes.aulaId))
         .innerJoin(instrutores, eq(instrutores.id, aulas.instrutorId))
@@ -119,7 +135,12 @@ export class AlunosService {
           .map(({ ordem: _o, ...h }) => h),
         anotacoes: anotacoes
           .filter((a) => ator.tipo !== 'aluno' || a.visivel)
-          .map((a) => ({ aulaId: a.aulaId, data: a.data.toISOString(), instrutor: a.instrutor, texto: a.texto })),
+          .map((a) => ({
+            aulaId: a.aulaId,
+            data: a.data.toISOString(),
+            instrutor: a.instrutor,
+            texto: a.texto,
+          })),
       };
     });
   }
@@ -149,8 +170,12 @@ export class AlunosService {
           selfieArquivoId: alunos.selfieArquivoId,
           categoriaDesejada: alunos.categoriaDesejada,
           aulasConcluidas: sql<number>`count(*) filter (where ${aulas.status} = 'concluida')::int`,
-          proximaAula: sql<string | null>`min(${aulas.inicio}) filter (where ${aulas.inicio} > now() and ${aulas.status} in ('solicitada','confirmada'))`,
-          ultimaAula: sql<string | null>`max(${aulas.inicio}) filter (where ${aulas.status} = 'concluida')`,
+          proximaAula: sql<
+            string | null
+          >`min(${aulas.inicio}) filter (where ${aulas.inicio} > now() and ${aulas.status} in ('solicitada','confirmada'))`,
+          ultimaAula: sql<
+            string | null
+          >`max(${aulas.inicio}) filter (where ${aulas.status} = 'concluida')`,
         })
         .from(aulas)
         .innerJoin(alunos, eq(alunos.id, aulas.alunoId))

@@ -1,5 +1,13 @@
 import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common';
-import { comAtor, definirContexto, ATOR_SISTEMA, type Ator, type ConexaoBanco, type Db, type Tx } from '@volante/db';
+import {
+  comAtor,
+  definirContexto,
+  ATOR_SISTEMA,
+  type Ator,
+  type ConexaoBanco,
+  type Db,
+  type Tx,
+} from '@volante/db';
 import { BANCO } from './tokens';
 
 @Injectable()

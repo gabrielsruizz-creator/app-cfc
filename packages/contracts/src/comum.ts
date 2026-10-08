@@ -23,12 +23,16 @@ export function cnpjValido(valor: string): boolean {
   if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
   const digito = (base: string) => {
     const pesos =
-      base.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+      base.length === 12
+        ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
     const soma = pesos.reduce((acc, peso, i) => acc + Number(base[i]) * peso, 0);
     const resto = soma % 11;
     return resto < 2 ? 0 : 11 - resto;
   };
-  return digito(cnpj.slice(0, 12)) === Number(cnpj[12]) && digito(cnpj.slice(0, 13)) === Number(cnpj[13]);
+  return (
+    digito(cnpj.slice(0, 12)) === Number(cnpj[12]) && digito(cnpj.slice(0, 13)) === Number(cnpj[13])
+  );
 }
 
 export const cpf = z
@@ -76,7 +80,9 @@ export type PontoGeo = z.infer<typeof pontoGeo>;
 export const dataIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida (use AAAA-MM-DD)');
 
 /** Horário no formato HH:MM. */
-export const horaMinuto = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido (use HH:MM)');
+export const horaMinuto = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido (use HH:MM)');
 
 export const instante = z.iso.datetime({ offset: true });
 

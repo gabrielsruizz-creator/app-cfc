@@ -1,4 +1,9 @@
-export type MensagemPush = { tokens: string[]; titulo: string; corpo: string; dados?: Record<string, unknown> };
+export type MensagemPush = {
+  tokens: string[];
+  titulo: string;
+  corpo: string;
+  dados?: Record<string, unknown>;
+};
 
 export type ResultadoPush =
   | { status: 'enviada' }

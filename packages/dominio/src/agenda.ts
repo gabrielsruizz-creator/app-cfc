@@ -51,7 +51,12 @@ export function calcularHorariosLivres(p: ParametrosHorarios): Intervalo[] {
   for (const faixa of faixas) {
     const fimFaixa = paraMinutos(faixa.horaFim);
     for (let m = paraMinutos(faixa.horaInicio); m + p.duracaoMin <= fimFaixa; m += passo) {
-      const inicio = dia.set({ hour: Math.floor(m / 60), minute: m % 60, second: 0, millisecond: 0 });
+      const inicio = dia.set({
+        hour: Math.floor(m / 60),
+        minute: m % 60,
+        second: 0,
+        millisecond: 0,
+      });
       const slot = {
         inicio: inicio.toJSDate(),
         fim: inicio.plus({ minutes: p.duracaoMin }).toJSDate(),
@@ -77,11 +82,15 @@ export function proximasDatas(agora: Date, fusoHorario: string, quantidade: numb
 }
 
 /** Distância em metros entre dois pontos (fórmula de Haversine). */
-export function distanciaMetros(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+export function distanciaMetros(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
   const R = 6371_000;
   const rad = (g: number) => (g * Math.PI) / 180;
   const dLat = rad(b.lat - a.lat);
   const dLng = rad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return Math.round(2 * R * Math.asin(Math.sqrt(h)));
 }

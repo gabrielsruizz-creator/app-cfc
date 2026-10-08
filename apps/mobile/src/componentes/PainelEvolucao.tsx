@@ -34,15 +34,29 @@ export function PainelEvolucao({ dados }: { dados: EvolucaoAluno }) {
               </Linha>
               <View
                 accessibilityLabel={`${h.nome}: nível ${h.nivelAtual} de 5`}
-                style={{ height: 10, borderRadius: raio.pilula, backgroundColor: cores.superficieAlt, overflow: 'hidden' }}
+                style={{
+                  height: 10,
+                  borderRadius: raio.pilula,
+                  backgroundColor: cores.superficieAlt,
+                  overflow: 'hidden',
+                }}
               >
-                <View style={{ width: `${(h.nivelAtual / 5) * 100}%`, height: '100%', backgroundColor: cores.primaria }} />
+                <View
+                  style={{
+                    width: `${(h.nivelAtual / 5) * 100}%`,
+                    height: '100%',
+                    backgroundColor: cores.primaria,
+                  }}
+                />
               </View>
             </Coluna>
           ))}
         </Cartao>
       ) : (
-        <Texto tipo="suave">Depois das aulas, o instrutor registra sua evolução em baliza, rampa, trânsito e outras habilidades.</Texto>
+        <Texto tipo="suave">
+          Depois das aulas, o instrutor registra sua evolução em baliza, rampa, trânsito e outras
+          habilidades.
+        </Texto>
       )}
       {dados.anotacoes.length > 0 && (
         <>
@@ -60,4 +74,3 @@ export function PainelEvolucao({ dados }: { dados: EvolucaoAluno }) {
     </>
   );
 }
-

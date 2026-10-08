@@ -24,7 +24,12 @@ type Aviso = { usuarioId: string; titulo: string; corpo: string; dados?: Record<
 const usuarioDoAluno = async (db: Db, alunoId: string) =>
   (await db.select({ id: alunos.usuarioId }).from(alunos).where(eq(alunos.id, alunoId)))[0]?.id;
 const usuarioDoInstrutor = async (db: Db, instrutorId: string) =>
-  (await db.select({ id: instrutores.usuarioId }).from(instrutores).where(eq(instrutores.id, instrutorId)))[0]?.id;
+  (
+    await db
+      .select({ id: instrutores.usuarioId })
+      .from(instrutores)
+      .where(eq(instrutores.id, instrutorId))
+  )[0]?.id;
 
 function quando(inicio: Date) {
   return inicio.toLocaleString('pt-BR', {
@@ -42,13 +47,24 @@ async function montarAvisos(db: Db, evento: Evento): Promise<Aviso[]> {
   const p = evento.payload as Record<string, string>;
   const avisos: Aviso[] = [];
   const aula = p.aulaId
-    ? (await comAtor(db, ATOR_SISTEMA, (tx) => tx.select().from(aulas).where(eq(aulas.id, p.aulaId!))))[0]
+    ? (
+        await comAtor(db, ATOR_SISTEMA, (tx) =>
+          tx.select().from(aulas).where(eq(aulas.id, p.aulaId!)),
+        )
+      )[0]
     : undefined;
   const aluno = p.alunoId ? await usuarioDoAluno(db, p.alunoId) : undefined;
   const instrutor = p.instrutorId ? await usuarioDoInstrutor(db, p.instrutorId) : undefined;
-  const dadosAula: Record<string, unknown> | undefined = aula ? { tela: 'aula', aulaId: aula.id } : undefined;
+  const dadosAula: Record<string, unknown> | undefined = aula
+    ? { tela: 'aula', aulaId: aula.id }
+    : undefined;
   const em = aula ? quando(aula.inicio) : '';
-  const add = (usuarioId: string | undefined, titulo: string, corpo: string, dados: Record<string, unknown> | undefined = dadosAula) => {
+  const add = (
+    usuarioId: string | undefined,
+    titulo: string,
+    corpo: string,
+    dados: Record<string, unknown> | undefined = dadosAula,
+  ) => {
     if (usuarioId) avisos.push({ usuarioId, titulo, corpo, dados });
   };
 
@@ -61,13 +77,22 @@ async function montarAvisos(db: Db, evento: Evento): Promise<Aviso[]> {
       add(aluno, 'Aula confirmada! 🚗', `Sua aula de ${em} foi confirmada pelo instrutor.`);
       break;
     case 'aula.recusada':
-      add(aluno, 'Aula não aceita', `O instrutor não pôde aceitar a aula de ${em}. O valor será devolvido.`);
+      add(
+        aluno,
+        'Aula não aceita',
+        `O instrutor não pôde aceitar a aula de ${em}. O valor será devolvido.`,
+      );
       break;
     case 'aula.expirada':
-      add(aluno, 'Solicitação expirou', `O instrutor não respondeu a tempo para ${em}. O valor será devolvido.`);
+      add(
+        aluno,
+        'Solicitação expirou',
+        `O instrutor não respondeu a tempo para ${em}. O valor será devolvido.`,
+      );
       break;
     case 'aula.cancelada':
-      if (p.canceladaPor === 'aluno') add(instrutor, 'Aula cancelada', `O aluno cancelou a aula de ${em}.`);
+      if (p.canceladaPor === 'aluno')
+        add(instrutor, 'Aula cancelada', `O aluno cancelou a aula de ${em}.`);
       else add(aluno, 'Aula cancelada', `A aula de ${em} foi cancelada. O valor será devolvido.`);
       break;
     case 'aula.remarcada':
@@ -81,7 +106,12 @@ async function montarAvisos(db: Db, evento: Evento): Promise<Aviso[]> {
       break;
     case 'aula.concluida':
       add(aluno, 'Como foi sua aula?', 'Avalie seu instrutor e veja sua evolução.');
-      if (aula) add(instrutor, 'Valor liberado', `O valor da aula de ${em} foi liberado (${formatarCentavos(aula.valorCentavos)} bruto).`);
+      if (aula)
+        add(
+          instrutor,
+          'Valor liberado',
+          `O valor da aula de ${em} foi liberado (${formatarCentavos(aula.valorCentavos)} bruto).`,
+        );
       break;
     case 'aula.avaliada':
       add(instrutor, 'Nova avaliação', `Você recebeu ${p.nota} estrela(s).`);
@@ -89,13 +119,25 @@ async function montarAvisos(db: Db, evento: Evento): Promise<Aviso[]> {
     case 'cobranca.expirada':
       break;
     case 'instrutor.aprovado':
-      add(p.usuarioId, 'Cadastro aprovado! 🎉', 'Ative "Disponível" para começar a receber alunos.', { tela: 'instrutor' });
+      add(
+        p.usuarioId,
+        'Cadastro aprovado! 🎉',
+        'Ative "Disponível" para começar a receber alunos.',
+        { tela: 'instrutor' },
+      );
       break;
     case 'instrutor.reprovado':
-      add(p.usuarioId, 'Cadastro precisa de ajustes', String(p.motivo || 'Veja os detalhes no app.'), { tela: 'instrutor' });
+      add(
+        p.usuarioId,
+        'Cadastro precisa de ajustes',
+        String(p.motivo || 'Veja os detalhes no app.'),
+        { tela: 'instrutor' },
+      );
       break;
     case 'instrutor.bloqueado':
-      add(p.usuarioId, 'Conta de instrutor bloqueada', String(p.motivo || 'Fale com o suporte.'), { tela: 'instrutor' });
+      add(p.usuarioId, 'Conta de instrutor bloqueada', String(p.motivo || 'Fale com o suporte.'), {
+        tela: 'instrutor',
+      });
       break;
     case 'instrutor.documento_vencendo':
     case 'instrutor.documento_vencido': {
@@ -113,7 +155,13 @@ async function montarAvisos(db: Db, evento: Evento): Promise<Aviso[]> {
     }
     case 'instrutor.enviado_analise': {
       const admins = await db.select({ id: adminsPlataforma.usuarioId }).from(adminsPlataforma);
-      for (const a of admins) add(a.id, 'Instrutor aguardando análise', 'Há um novo cadastro de instrutor para analisar.', { tela: 'admin' });
+      for (const a of admins)
+        add(
+          a.id,
+          'Instrutor aguardando análise',
+          'Há um novo cadastro de instrutor para analisar.',
+          { tela: 'admin' },
+        );
       break;
     }
     case 'autoescola.aprovada':
@@ -122,13 +170,22 @@ async function montarAvisos(db: Db, evento: Evento): Promise<Aviso[]> {
         tx
           .select({ id: autoescolaMembros.usuarioId })
           .from(autoescolaMembros)
-          .where(and(eq(autoescolaMembros.autoescolaId, p.autoescolaId!), inArray(autoescolaMembros.papel, ['dono', 'gerente']))),
+          .where(
+            and(
+              eq(autoescolaMembros.autoescolaId, p.autoescolaId!),
+              inArray(autoescolaMembros.papel, ['dono', 'gerente']),
+            ),
+          ),
       );
       for (const m of membros) {
         add(
           m.id,
-          evento.tipo === 'autoescola.aprovada' ? 'Autoescola aprovada' : 'Cadastro da autoescola precisa de ajustes',
-          evento.tipo === 'autoescola.aprovada' ? 'Sua autoescola já aparece no app.' : String(p.motivo || ''),
+          evento.tipo === 'autoescola.aprovada'
+            ? 'Autoescola aprovada'
+            : 'Cadastro da autoescola precisa de ajustes',
+          evento.tipo === 'autoescola.aprovada'
+            ? 'Sua autoescola já aparece no app.'
+            : String(p.motivo || ''),
           { tela: 'autoescola' },
         );
       }
@@ -146,7 +203,9 @@ async function entregarPush(deps: Dependencias, notificacaoId: string, aviso: Av
     .from(dispositivosPush)
     .where(and(eq(dispositivosPush.usuarioId, aviso.usuarioId), eq(dispositivosPush.ativo, true)));
   if (!dispositivos.length) {
-    await deps.db.insert(entregasNotificacao).values({ notificacaoId, canal: 'push', status: 'sem_destino' });
+    await deps.db
+      .insert(entregasNotificacao)
+      .values({ notificacaoId, canal: 'push', status: 'sem_destino' });
     return;
   }
   const r = await deps.push.enviar({

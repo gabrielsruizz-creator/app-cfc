@@ -27,7 +27,13 @@ export const STATUS_INSTRUTOR = [
 export const statusInstrutor = z.enum(STATUS_INSTRUTOR);
 export type StatusInstrutor = z.infer<typeof statusInstrutor>;
 
-export const STATUS_AUTOESCOLA = ['rascunho', 'em_analise', 'aprovada', 'reprovada', 'suspensa'] as const;
+export const STATUS_AUTOESCOLA = [
+  'rascunho',
+  'em_analise',
+  'aprovada',
+  'reprovada',
+  'suspensa',
+] as const;
 export const statusAutoescola = z.enum(STATUS_AUTOESCOLA);
 export type StatusAutoescola = z.infer<typeof statusAutoescola>;
 
@@ -57,7 +63,13 @@ export const TIPOS_DOCUMENTO_AUTOESCOLA = [
 export const tipoDocumentoAutoescola = z.enum(TIPOS_DOCUMENTO_AUTOESCOLA);
 export type TipoDocumentoAutoescola = z.infer<typeof tipoDocumentoAutoescola>;
 
-export const STATUS_DOCUMENTO = ['pendente', 'aprovado', 'reprovado', 'vencido', 'substituido'] as const;
+export const STATUS_DOCUMENTO = [
+  'pendente',
+  'aprovado',
+  'reprovado',
+  'vencido',
+  'substituido',
+] as const;
 export type StatusDocumento = (typeof STATUS_DOCUMENTO)[number];
 
 export const STATUS_AULA = [
@@ -95,7 +107,13 @@ export const STATUS_PEDIDO = [
 ] as const;
 export type StatusPedido = (typeof STATUS_PEDIDO)[number];
 
-export const STATUS_ATENDIMENTO = ['novo', 'em_contato', 'confirmado', 'recusado', 'expirado'] as const;
+export const STATUS_ATENDIMENTO = [
+  'novo',
+  'em_contato',
+  'confirmado',
+  'recusado',
+  'expirado',
+] as const;
 export type StatusAtendimento = (typeof STATUS_ATENDIMENTO)[number];
 
 export const STATUS_COBRANCA = [
@@ -164,7 +182,13 @@ export type FinalidadeConsentimento = z.infer<typeof finalidadeConsentimento>;
 export const MODOS = ['aluno', 'instrutor', 'autoescola', 'admin'] as const;
 export type Modo = (typeof MODOS)[number];
 
-export const TIPOS_REGISTRO_EXTERNO = ['aluno', 'pedido', 'matricula', 'instrutor', 'aula'] as const;
+export const TIPOS_REGISTRO_EXTERNO = [
+  'aluno',
+  'pedido',
+  'matricula',
+  'instrutor',
+  'aula',
+] as const;
 export type TipoRegistroExterno = (typeof TIPOS_REGISTRO_EXTERNO)[number];
 
 export const SISTEMAS_EXTERNOS = ['cfc_plus'] as const;
