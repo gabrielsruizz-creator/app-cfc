@@ -17,6 +17,7 @@ import {
   Texto,
 } from '../../src/componentes/ui';
 import { api, mensagemDeErro } from '../../src/servicos/api';
+import { abrirConversa } from '../../src/servicos/comercial';
 import { raio } from '../../src/tema/cores';
 import { useTema } from '../../src/tema/TemaProvider';
 import {
@@ -145,6 +146,16 @@ export default function AulaAluno() {
         </Aviso>
       )}
 
+      {(a.status === 'aguardando_confirmacao' ||
+        (a.status === 'confirmada' && new Date(a.fim) < new Date())) && (
+        <Botao
+          titulo="Relatar problema nesta aula"
+          icone="alert-circle"
+          variante="texto"
+          aoPressionar={() => router.push(`/relatar/${a.id}?como=aluno`)}
+        />
+      )}
+
       {a.status === 'concluida' && !a.avaliada && (
         <Botao
           titulo="Avaliar esta aula"
@@ -230,6 +241,23 @@ export default function AulaAluno() {
           </Texto>
         )}
       </Cartao>
+
+      <Linha style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <Botao
+          titulo="Conversar com o instrutor"
+          icone="chatbubbles"
+          variante="texto"
+          aoPressionar={() => abrirConversa({ instrutorId: a.instrutor.id })}
+        />
+        <Botao
+          titulo="Denunciar"
+          icone="flag"
+          variante="texto"
+          aoPressionar={() =>
+            router.push(`/denunciar?alvoTipo=instrutor&alvoId=${a.instrutor.id}&aulaId=${a.id}`)
+          }
+        />
+      </Linha>
 
       {ativa && (
         <Coluna>

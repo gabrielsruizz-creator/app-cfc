@@ -37,9 +37,11 @@ import { dataCurta, formatarCentavos, hora, partesData } from '../../src/util/fo
 type Passo = 'quando' | 'onde' | 'resumo';
 
 export default function Agendar() {
-  const { instrutorId, remarcar } = useLocalSearchParams<{
+  const { instrutorId, remarcar, credito } = useLocalSearchParams<{
     instrutorId: string;
     remarcar?: string;
+    /** Agendar usando o saldo de um pacote (sem novo pagamento). */
+    credito?: string;
   }>();
   const { eu } = useAuth();
   const { cores, escuro } = useTema();
@@ -134,6 +136,21 @@ export default function Agendar() {
     setErro(null);
     setEnviando(true);
     try {
+      if (credito) {
+        const aula = await api<AulaDetalhe>('/aluno/aulas/com-credito', {
+          corpo: {
+            creditoId: credito,
+            instrutorId,
+            inicio: horario.inicio,
+            categoria,
+            pontoEncontro: ponto,
+            pontoEncontroEndereco: endereco || 'Ponto marcado no mapa',
+            pontoEncontroReferencia: referencia || undefined,
+          },
+        });
+        router.replace(`/aula/${aula.id}`);
+        return;
+      }
       const aula = await api<AulaDetalhe>('/aluno/aulas', {
         corpo: {
           instrutorId,
@@ -350,25 +367,40 @@ export default function Agendar() {
         <Texto tipo="rotulo">Categoria</Texto>
         <Texto>{categoria}</Texto>
       </Cartao>
-      <Cartao>
-        <Linha style={{ justifyContent: 'space-between' }}>
-          <Texto>Aula avulsa</Texto>
-          <Texto tipo="subtitulo" cor={cores.primaria}>
-            {formatarCentavos(i.precoAulaCentavos)}
+      {credito ? (
+        <Cartao>
+          <Linha style={{ justifyContent: 'space-between' }}>
+            <Texto>Aula do seu pacote</Texto>
+            <Texto tipo="subtitulo" cor={cores.primaria}>
+              1 aula
+            </Texto>
+          </Linha>
+          <Texto tipo="pequeno">
+            Sem novo pagamento: usa uma aula do seu saldo. Se o instrutor não aceitar ou a aula for
+            cancelada a tempo, a aula volta para o saldo.
           </Texto>
-        </Linha>
-        <Texto tipo="pequeno">
-          Pagamento via Pix. O valor fica guardado e só é repassado ao instrutor depois da aula.
-        </Texto>
-      </Cartao>
+        </Cartao>
+      ) : (
+        <Cartao>
+          <Linha style={{ justifyContent: 'space-between' }}>
+            <Texto>Aula avulsa</Texto>
+            <Texto tipo="subtitulo" cor={cores.primaria}>
+              {formatarCentavos(i.precoAulaCentavos)}
+            </Texto>
+          </Linha>
+          <Texto tipo="pequeno">
+            Pagamento via Pix. O valor fica guardado e só é repassado ao instrutor depois da aula.
+          </Texto>
+        </Cartao>
+      )}
       {cfg && (
         <Aviso tipo="info" titulo="Regra de cancelamento">
           {`Cancelamento grátis até ${cfg.cancelamentoGratisAteHoras} horas antes da aula. Depois disso, há multa de ${cfg.cancelamentoMultaBp / 100}% do valor. Se o instrutor não aceitar ou cancelar, você recebe tudo de volta.`}
         </Aviso>
       )}
       <Botao
-        titulo="Ir para o pagamento"
-        icone="qr-code"
+        titulo={credito ? 'Solicitar aula' : 'Ir para o pagamento'}
+        icone={credito ? 'checkmark' : 'qr-code'}
         carregando={enviando}
         aoPressionar={confirmar}
       />

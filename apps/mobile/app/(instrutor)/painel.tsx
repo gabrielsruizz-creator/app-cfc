@@ -85,7 +85,31 @@ export default function PainelInstrutor() {
         />
       </Cartao>
       <Cartao>
-        <ItemLista icone="wallet" titulo="Ganhos e saques" descricao="Em breve" />
+        <ItemLista
+          icone="wallet"
+          titulo="Ganhos e saques"
+          aoPressionar={() => router.push('/area-instrutor/financeiro')}
+        />
+        <Divisor />
+        <ItemLista
+          icone="albums"
+          titulo="Meus pacotes"
+          descricao="Venda aulas em pacote com desconto"
+          aoPressionar={() => router.push('/area-instrutor/pacotes')}
+        />
+        <Divisor />
+        <ItemLista
+          icone="business"
+          titulo="Autoescolas"
+          descricao="Convites e equipes de que você faz parte"
+          aoPressionar={() => router.push('/area-instrutor/vinculos')}
+        />
+        <Divisor />
+        <ItemLista
+          icone="chatbubbles"
+          titulo="Conversas"
+          aoPressionar={() => router.push('/conversas?como=instrutor')}
+        />
         <Divisor />
         <ItemLista
           icone="notifications"

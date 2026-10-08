@@ -40,6 +40,17 @@ function Navegacao() {
           options={{ title: 'Avaliar aula', presentation: 'modal' }}
         />
         <Stack.Screen name="evolucao" options={{ title: 'Minha evolução' }} />
+        <Stack.Screen name="autoescola/[id]" options={{ title: 'Autoescola' }} />
+        <Stack.Screen name="pedido/[id]" options={{ title: 'Pedido' }} />
+        <Stack.Screen name="pedidos" options={{ title: 'Meus pacotes' }} />
+        <Stack.Screen name="creditos" options={{ title: 'Saldo de aulas' }} />
+        <Stack.Screen name="conversas" options={{ title: 'Conversas' }} />
+        <Stack.Screen name="conversa/[id]" options={{ title: 'Conversa' }} />
+        <Stack.Screen name="relatar/[aulaId]" options={{ title: 'Relatar problema' }} />
+        <Stack.Screen name="denunciar" options={{ title: 'Denunciar' }} />
+        <Stack.Screen name="area-instrutor/pacotes" options={{ title: 'Meus pacotes' }} />
+        <Stack.Screen name="area-instrutor/financeiro" options={{ title: 'Ganhos e saques' }} />
+        <Stack.Screen name="area-instrutor/vinculos" options={{ title: 'Autoescolas' }} />
         <Stack.Screen name="recibos" options={{ title: 'Recibos' }} />
         <Stack.Screen name="notificacoes" options={{ title: 'Notificações' }} />
         <Stack.Screen name="privacidade" options={{ title: 'Privacidade e dados' }} />

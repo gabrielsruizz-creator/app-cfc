@@ -29,6 +29,26 @@ export default function ContaAluno() {
       </Linha>
       <Cartao>
         <ItemLista
+          icone="albums"
+          titulo="Saldo de aulas"
+          descricao="Agende com as aulas dos seus pacotes"
+          aoPressionar={() => router.push('/creditos')}
+        />
+        <Divisor />
+        <ItemLista
+          icone="bag-handle"
+          titulo="Meus pacotes"
+          aoPressionar={() => router.push('/pedidos')}
+        />
+        <Divisor />
+        <ItemLista
+          icone="chatbubbles"
+          titulo="Conversas"
+          aoPressionar={() => router.push('/conversas?como=aluno')}
+        />
+      </Cartao>
+      <Cartao>
+        <ItemLista
           icone="trending-up"
           titulo="Minha evolução"
           aoPressionar={() => router.push('/evolucao')}

@@ -1,4 +1,4 @@
-import type { AulaResumo } from '@volante/contracts';
+import type { AulaResumo, SaldoCredito } from '@volante/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { CartaoAula } from '../../src/componentes/CartaoAula';
@@ -25,7 +25,15 @@ export default function InicioAluno() {
     queryKey: ['notificacoes'],
     queryFn: () => api<Notificacao[]>('/notificacoes'),
   });
+  const creditos = useQuery({
+    queryKey: ['creditos'],
+    queryFn: () => api<SaldoCredito[]>('/aluno/creditos'),
+  });
   const naoLidas = notif.data?.filter((n) => !n.lida).length ?? 0;
+  const saldo = (creditos.data ?? [])
+    .filter((c) => c.status === 'ativo')
+    .reduce((t, c) => t + c.disponiveis, 0);
+  const aguardandoAutoescola = (creditos.data ?? []).some((c) => c.status === 'bloqueado');
   const proxima = aulas.data?.[0];
   const pendenteConfirmacao = aulas.data?.find((a) => a.status === 'aguardando_confirmacao');
 
@@ -35,6 +43,7 @@ export default function InicioAluno() {
         void aulas.refetch();
         void evolucao.refetch();
         void notif.refetch();
+        void creditos.refetch();
       }}
       atualizando={aulas.isRefetching}
     >
@@ -56,6 +65,27 @@ export default function InicioAluno() {
             compacto
             aoPressionar={() => router.push(`/aula/${pendenteConfirmacao.id}`)}
           />
+        </Aviso>
+      )}
+      {saldo > 0 && (
+        <Cartao aoPressionar={() => router.push('/creditos')}>
+          <Linha style={{ justifyContent: 'space-between' }}>
+            <Coluna gap={2} style={{ flex: 1 }}>
+              <Texto tipo="rotulo">Saldo de aulas</Texto>
+              <Texto tipo="subtitulo" cor={cores.primaria}>
+                {saldo} {saldo === 1 ? 'aula disponível' : 'aulas disponíveis'}
+              </Texto>
+            </Coluna>
+            <Texto negrito cor={cores.primaria}>
+              Agendar
+            </Texto>
+          </Linha>
+        </Cartao>
+      )}
+      {aguardandoAutoescola && (
+        <Aviso tipo="info" titulo="Aguardando contato da autoescola">
+          A autoescola vai falar com você para confirmar a matrícula. Acompanhe em Perfil › Meus
+          pacotes.
         </Aviso>
       )}
       <Coluna>

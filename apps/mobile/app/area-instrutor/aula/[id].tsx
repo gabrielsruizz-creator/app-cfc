@@ -19,6 +19,7 @@ import {
   Texto,
 } from '../../../src/componentes/ui';
 import { api, mensagemDeErro } from '../../../src/servicos/api';
+import { abrirConversa } from '../../../src/servicos/comercial';
 import { obterLocalizacao } from '../../../src/util/dispositivo';
 import { dataHora, formatarCentavos, hora } from '../../../src/util/formatos';
 
@@ -152,12 +153,21 @@ export default function AulaInstrutor() {
             <Texto tipo="pequeno">Categoria {a.categoria}</Texto>
           </Coluna>
         </Linha>
-        <Botao
-          titulo="Ficha do aluno"
-          compacto
-          variante="texto"
-          aoPressionar={() => router.push(`/area-instrutor/aluno/${a.aluno.id}`)}
-        />
+        <Linha style={{ flexWrap: 'wrap' }}>
+          <Botao
+            titulo="Ficha do aluno"
+            compacto
+            variante="texto"
+            aoPressionar={() => router.push(`/area-instrutor/aluno/${a.aluno.id}`)}
+          />
+          <Botao
+            titulo="Mensagem"
+            icone="chatbubbles"
+            compacto
+            variante="texto"
+            aoPressionar={() => abrirConversa({ alunoId: a.aluno.id }, 'instrutor')}
+          />
+        </Linha>
       </Cartao>
       <Cartao>
         <Texto tipo="rotulo">Ponto de encontro</Texto>
@@ -253,6 +263,15 @@ export default function AulaInstrutor() {
           Aguardando o aluno confirmar o fim da aula. Se ele não responder em 24 h, a confirmação é
           automática.
         </Aviso>
+      )}
+      {(a.status === 'aguardando_confirmacao' ||
+        (a.status === 'confirmada' && new Date(a.fim) < new Date())) && (
+        <Botao
+          titulo="Relatar problema (ex.: aluno não compareceu)"
+          icone="alert-circle"
+          variante="texto"
+          aoPressionar={() => router.push(`/relatar/${a.id}?como=instrutor`)}
+        />
       )}
       {a.status === 'concluida' && (
         <Aviso tipo="sucesso">

@@ -238,23 +238,27 @@ export function BotaoIcone({
   aoPressionar,
   rotulo,
   cor,
+  desabilitado = false,
 }: {
   icone: NomeIcone;
   aoPressionar: () => void;
   rotulo: string;
   cor?: string;
+  desabilitado?: boolean;
 }) {
   const { cores } = useTema();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={rotulo}
+      accessibilityState={{ disabled: desabilitado }}
+      disabled={desabilitado}
       onPress={aoPressionar}
       hitSlop={8}
       style={({ pressed }) => ({
         padding: espaco.sm,
         borderRadius: raio.pilula,
-        opacity: pressed ? 0.6 : 1,
+        opacity: desabilitado ? 0.4 : pressed ? 0.6 : 1,
       })}
     >
       <Ionicons name={icone} size={24} color={cor ?? cores.texto} />

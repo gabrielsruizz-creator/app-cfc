@@ -1,4 +1,4 @@
-import type { PerfilInstrutorPublico } from '@volante/contracts';
+import type { Pacote, PerfilInstrutorPublico } from '@volante/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
@@ -16,15 +16,22 @@ import {
   Texto,
 } from '../../src/componentes/ui';
 import { api } from '../../src/servicos/api';
+import { useAuth } from '../../src/servicos/AuthProvider';
+import { comprarPacote } from '../../src/servicos/comercial';
 import { useTema } from '../../src/tema/TemaProvider';
 import { dataCurta, formatarCentavos } from '../../src/util/formatos';
 
 export default function PerfilInstrutor() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { cores } = useTema();
+  const { eu } = useAuth();
   const q = useQuery({
     queryKey: ['instrutor', id],
     queryFn: () => api<PerfilInstrutorPublico>(`/publico/instrutores/${id}`),
+  });
+  const pacotes = useQuery({
+    queryKey: ['instrutor', id, 'pacotes'],
+    queryFn: () => api<Pacote[]>(`/publico/instrutores/${id}/pacotes`),
   });
   if (q.isLoading || !q.data) return <Carregando />;
   const i = q.data;
@@ -98,6 +105,39 @@ export default function PerfilInstrutor() {
             <Texto tipo="suave">As aulas são feitas no veículo do aluno.</Texto>
           )}
         </Coluna>
+        {pacotes.data && pacotes.data.length > 0 && (
+          <Coluna>
+            <Texto tipo="subtitulo">Pacotes</Texto>
+            {pacotes.data.map((p) => (
+              <Cartao key={p.id}>
+                <Linha style={{ justifyContent: 'space-between' }}>
+                  <Texto negrito style={{ flex: 1 }}>
+                    {p.nome}
+                  </Texto>
+                  <Texto tipo="subtitulo" cor={cores.primaria}>
+                    {formatarCentavos(p.precoCentavos)}
+                  </Texto>
+                </Linha>
+                <Texto tipo="suave">
+                  {p.quantidadeAulas} aulas · {formatarCentavos(p.precoPorAulaCentavos)} por aula
+                  {p.precoPorAulaCentavos < i.precoAulaCentavos
+                    ? ` (economia de ${formatarCentavos((i.precoAulaCentavos - p.precoPorAulaCentavos) * p.quantidadeAulas)})`
+                    : ''}
+                </Texto>
+                <Botao
+                  titulo="Comprar com Pix"
+                  icone="cart"
+                  compacto
+                  variante="secundario"
+                  aoPressionar={() => comprarPacote(p.id, !!eu?.aluno)}
+                />
+              </Cartao>
+            ))}
+            <Texto tipo="pequeno">
+              O valor fica guardado e é repassado ao instrutor a cada aula realizada.
+            </Texto>
+          </Coluna>
+        )}
         <Coluna>
           <Texto tipo="subtitulo">Avaliações</Texto>
           {i.avaliacoes.length ? (
