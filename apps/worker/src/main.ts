@@ -1,7 +1,7 @@
 import { carregarEnv } from './carregar-env';
 carregarEnv();
 
-import { conectar } from '@volante/db';
+import { conectarAplicacao } from '@volante/db';
 import { Client } from 'pg';
 import { lerConfigWorker, montarDependencias } from './config';
 import { CONSUMIDORES } from './consumidores';
@@ -14,7 +14,7 @@ import { executarRotinas } from './rotinas';
  */
 async function iniciar() {
   const config = lerConfigWorker();
-  const { db, encerrar } = conectar(config.DATABASE_URL, { max: 5 });
+  const { db, encerrar } = await conectarAplicacao(config.DATABASE_URL, { max: 5 });
   const deps = montarDependencias(db, config);
 
   let processando = false;

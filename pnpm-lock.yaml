@@ -44,6 +44,9 @@ importers:
       '@volante/dominio':
         specifier: workspace:*
         version: link:../../packages/dominio
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1
       jose:
         specifier: ^6.0.0
         version: 6.2.12

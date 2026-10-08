@@ -19,6 +19,26 @@ Funciona sozinho; a integração com o ERP CFC Plus é opcional e virá na Fase 
 | `packages/contracts` | Schemas Zod compartilhados entre app, painel e API.                                               |
 | `docs/`              | [Modelagem do banco](docs/01-modelagem-banco.md) e [mapa de telas](docs/02-mapa-de-telas.md).     |
 
+## Testar sem instalar banco: Render (nuvem)
+
+O arquivo `render.yaml` cria no [Render](https://render.com) um **ambiente de testes gratuito**: banco PostgreSQL + PostGIS
+e um serviço que roda a API, o worker e o painel web (em `/painel`).
+
+1. Crie uma conta no Render e conecte sua conta do GitHub.
+2. No painel do Render: **New → Blueprint** → escolha o repositório `app-cfc` e o branch deste projeto → **Apply**.
+3. Espere o deploy terminar (≈ 5–10 min na primeira vez). O endereço aparece em **volante-api**, algo como
+   `https://volante-api.onrender.com`.
+4. Painel web: abra `https://SEU-ENDERECO.onrender.com/painel`. A senha do admin (`admin@volante.dev`) foi gerada
+   automaticamente: veja em **volante-api → Environment → ADMIN_SENHA**.
+5. App no celular: no seu computador (sem precisar de Docker), crie o arquivo `apps/mobile/.env` com
+   ```
+   EXPO_PUBLIC_API_URL=https://SEU-ENDERECO.onrender.com
+   ```
+   e rode `pnpm install` e `pnpm dev:mobile`. Leia o QR Code com o Expo Go (celular e computador no mesmo Wi-Fi).
+
+Limitações do plano gratuito: a API "dorme" após 15 min sem uso (o primeiro acesso demora ~1 min), o banco
+gratuito expira em 30 dias e fotos/documentos enviados somem quando o serviço reinicia.
+
 ## Como rodar no seu computador
 
 Pré-requisitos: **Node 22**, **pnpm 10** (`npm i -g pnpm`), **Docker** e o app **Expo Go** no celular.

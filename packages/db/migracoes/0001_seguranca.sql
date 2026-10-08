@@ -8,27 +8,38 @@
 -- =====================================================================
 
 -- ---------- Papel da aplicação ----------
--- A API e o worker conectam e executam "SET ROLE volante_app". Esse papel não é dono das
+-- A API e o worker conectam assumindo o papel volante_app. Esse papel não é dono das
 -- tabelas e não tem BYPASSRLS, então as políticas abaixo sempre se aplicam a ele.
+-- Em bancos gerenciados que não permitem CREATE ROLE (ex.: alguns planos de nuvem), o papel
+-- não é criado: o RLS passa a ser FORÇADO também para o dono das tabelas (fim deste arquivo)
+-- e a aplicação conecta sem trocar de papel. O isolamento continua o mesmo.
+CREATE OR REPLACE FUNCTION app_papel_disponivel() RETURNS boolean
+  LANGUAGE sql STABLE AS $$
+    SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'volante_app')
+                THEN pg_has_role(current_user, 'volante_app', 'MEMBER') ELSE false END
+  $$;
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'volante_app') THEN
     BEGIN
       CREATE ROLE volante_app NOLOGIN;
-    EXCEPTION WHEN duplicate_object OR unique_violation THEN
-      NULL; -- outro processo criou o papel ao mesmo tempo (o papel é global no servidor)
+    EXCEPTION
+      WHEN duplicate_object OR unique_violation THEN
+        NULL; -- outro processo criou o papel ao mesmo tempo (o papel é global no servidor)
+      WHEN insufficient_privilege THEN
+        RAISE NOTICE 'Sem permissão para criar o papel volante_app: RLS será forçado para o dono das tabelas.';
+        RETURN;
     END;
   END IF;
-  EXECUTE format('GRANT volante_app TO %I', current_user);
+  BEGIN
+    EXECUTE format('GRANT volante_app TO %I', current_user);
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Sem permissão para assumir o papel volante_app: RLS será forçado para o dono das tabelas.';
+  END;
 END $$;
 
-GRANT USAGE ON SCHEMA public TO volante_app;
-GRANT USAGE ON SCHEMA auditoria TO volante_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO volante_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO volante_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO volante_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO volante_app;
-GRANT SELECT, INSERT ON auditoria.registros TO volante_app;
+-- Permissões do papel (aplicadas no fim do arquivo, depois que todos os objetos existem).
 
 -- ---------- Contexto da requisição ----------
 -- Definido com set_config(..., true) no início de cada transação (ver src/contexto.ts).
@@ -157,14 +168,21 @@ ALTER TABLE aulas ADD CONSTRAINT aulas_sem_conflito_aluno
 -- SECURITY DEFINER: executa como dono da tabela (fora do RLS) e devolve só intervalos.
 CREATE OR REPLACE FUNCTION horarios_ocupados_instrutor(p_instrutor uuid, p_de timestamptz, p_ate timestamptz)
   RETURNS TABLE (inicio timestamptz, fim timestamptz)
-  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  ator_anterior text := current_setting('app.ator_tipo', true);
+BEGIN
+  -- Com RLS forçado (sem o papel volante_app), o dono também passa pelas políticas:
+  -- assume "sistema" só durante esta consulta e restaura o contexto anterior.
+  PERFORM set_config('app.ator_tipo', 'sistema', true);
+  RETURN QUERY
     SELECT a.inicio, a.fim FROM aulas a
     WHERE a.instrutor_id = p_instrutor
       AND a.status IN ('aguardando_pagamento', 'solicitada', 'confirmada', 'a_caminho', 'em_andamento')
-      AND a.periodo && tstzrange(p_de, p_ate, '[)')
-  $$;
+      AND a.periodo && tstzrange(p_de, p_ate, '[)');
+  PERFORM set_config('app.ator_tipo', coalesce(ator_anterior, ''), true);
+END $$;
 REVOKE ALL ON FUNCTION horarios_ocupados_instrutor(uuid, timestamptz, timestamptz) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION horarios_ocupados_instrutor(uuid, timestamptz, timestamptz) TO volante_app;
 
 -- ---------- Tabelas append-only ----------
 CREATE OR REPLACE FUNCTION impedir_alteracao() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -179,7 +197,6 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'lancamentos', 'consentimentos', 'pedido_historico', 'aula_historico', 'creditos_movimentos'
   ] LOOP
-    EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON %I FROM volante_app', t);
     EXECUTE format(
       'CREATE TRIGGER %I BEFORE UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION impedir_alteracao()',
       t || '_append_only', t);
@@ -219,7 +236,6 @@ CREATE TRIGGER registros_imutavel BEFORE UPDATE OR DELETE ON auditoria.registros
   FOR EACH ROW EXECUTE FUNCTION impedir_alteracao();
 CREATE TRIGGER registros_sem_truncate BEFORE TRUNCATE ON auditoria.registros
   FOR EACH STATEMENT EXECUTE FUNCTION impedir_alteracao();
-REVOKE UPDATE, DELETE, TRUNCATE ON auditoria.registros FROM volante_app;
 
 -- Retorna o seq do primeiro registro cuja cadeia não confere (NULL = íntegra).
 CREATE OR REPLACE FUNCTION auditoria.verificar_cadeia() RETURNS bigint
@@ -237,7 +253,6 @@ BEGIN
   END LOOP;
   RETURN NULL;
 END $$;
-GRANT EXECUTE ON FUNCTION auditoria.verificar_cadeia() TO volante_app;
 
 -- ---------- Outbox: acorda o worker ----------
 CREATE OR REPLACE FUNCTION outbox_notificar() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -248,3 +263,29 @@ END $$;
 
 CREATE TRIGGER outbox_eventos_notificar AFTER INSERT ON outbox_eventos
   FOR EACH ROW EXECUTE FUNCTION outbox_notificar();
+
+-- ---------- Permissões do papel da aplicação, ou RLS forçado sem ele ----------
+DO $$
+DECLARE t text;
+BEGIN
+  IF app_papel_disponivel() THEN
+    GRANT USAGE ON SCHEMA public TO volante_app;
+    GRANT USAGE ON SCHEMA auditoria TO volante_app;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO volante_app;
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO volante_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO volante_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO volante_app;
+    GRANT SELECT, INSERT ON auditoria.registros TO volante_app;
+    GRANT EXECUTE ON FUNCTION horarios_ocupados_instrutor(uuid, timestamptz, timestamptz) TO volante_app;
+    GRANT EXECUTE ON FUNCTION auditoria.verificar_cadeia() TO volante_app;
+    REVOKE UPDATE, DELETE, TRUNCATE ON auditoria.registros FROM volante_app;
+    FOREACH t IN ARRAY ARRAY['lancamentos', 'consentimentos', 'pedido_historico', 'aula_historico', 'creditos_movimentos'] LOOP
+      EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON %I FROM volante_app', t);
+    END LOOP;
+  ELSE
+    FOR t IN SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity LOOP
+      EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
+    END LOOP;
+  END IF;
+END $$;

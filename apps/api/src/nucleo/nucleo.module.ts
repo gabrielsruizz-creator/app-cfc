@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { conectar } from '@volante/db';
+import { conectarAplicacao } from '@volante/db';
 import { CONFIG, lerConfig, type Config } from '../config';
 import { ArmazenamentoLocal } from './armazenamento';
 import { AutenticacaoGuard } from './auth/autenticacao.guard';
@@ -12,7 +12,11 @@ import { ARMAZENAMENTO, BANCO } from './tokens';
 @Module({
   providers: [
     { provide: CONFIG, useFactory: () => lerConfig() },
-    { provide: BANCO, inject: [CONFIG], useFactory: (c: Config) => conectar(c.DATABASE_URL) },
+    {
+      provide: BANCO,
+      inject: [CONFIG],
+      useFactory: (c: Config) => conectarAplicacao(c.DATABASE_URL),
+    },
     {
       provide: ARMAZENAMENTO,
       inject: [CONFIG],

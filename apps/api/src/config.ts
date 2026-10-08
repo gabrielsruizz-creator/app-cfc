@@ -3,12 +3,16 @@ import { z } from 'zod';
 const esquema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORTA: z.coerce.number().default(3000),
+  /** Definida por plataformas como o Render; tem prioridade sobre PORTA. */
+  PORT: z.coerce.number().optional(),
   DATABASE_URL: z.string().default('postgres://postgres:postgres@localhost:5432/volante'),
   JWT_SEGREDO: z.string().min(16).default('desenvolvimento-troque-este-segredo'),
   /** simulado (testes) | nao_configurado | asaas */
   PAGAMENTO_GATEWAY: z.enum(['simulado', 'nao_configurado', 'asaas']).default('nao_configurado'),
   ARMAZENAMENTO_DIR: z.string().default('.armazenamento'),
   CORS_ORIGENS: z.string().default('*'),
+  /** Pasta do painel web compilado (apps/web/dist) para servir em /painel. */
+  PAINEL_DIR: z.string().optional(),
 });
 
 export type Config = z.infer<typeof esquema>;

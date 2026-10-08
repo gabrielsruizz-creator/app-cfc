@@ -1,0 +1,54 @@
+# Blueprint do Render — AMBIENTE DE TESTES (planos gratuitos).
+# No painel do Render: New > Blueprint > escolha este repositório e o branch.
+#
+# Limitações do plano gratuito:
+# - a API "dorme" após 15 min sem uso; o primeiro acesso depois disso demora ~1 min;
+# - o banco gratuito do Render expira depois de 30 dias;
+# - arquivos enviados (selfies, documentos) somem quando o serviço reinicia
+#   (o disco é temporário; em produção usaremos um bucket S3 privado).
+
+databases:
+  - name: volante-banco
+    plan: free
+    databaseName: volante
+    postgresMajorVersion: '17'
+
+services:
+  - type: web
+    name: volante-api
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: >-
+      npm install -g pnpm@10.28.0 &&
+      pnpm install --frozen-lockfile &&
+      pnpm build:pacotes &&
+      pnpm --filter @volante/api build &&
+      pnpm --filter @volante/worker build &&
+      VITE_BASE=/painel/ VITE_API_URL= pnpm --filter @volante/web build
+    startCommand: node scripts/iniciar-render.mjs
+    healthCheckPath: /saude
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      # Ambiente de testes: permite o Pix simulado (bloqueado quando NODE_ENV=production).
+      - key: NODE_ENV
+        value: development
+      - key: PAGAMENTO_GATEWAY
+        value: simulado
+      - key: DATABASE_URL
+        fromDatabase:
+          name: volante-banco
+          property: connectionString
+      - key: JWT_SEGREDO
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@volante.dev
+      # Senha do admin gerada automaticamente: veja em volante-api > Environment.
+      - key: ADMIN_SENHA
+        generateValue: true
+      - key: PUSH_PROVEDOR
+        value: nenhum
+      # A API também serve o painel web em /painel (mesmo endereço, sem configurar CORS).
+      - key: PAINEL_DIR
+        value: apps/web/dist

@@ -10,7 +10,7 @@ import { hash } from '@node-rs/argon2';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { and, eq } from 'drizzle-orm';
-import { conectar } from '../cliente';
+import { conectarAplicacao, type Db } from '../cliente';
 import { ATOR_SISTEMA, comAtor } from '../contexto';
 import { cnpjAleatorio } from '../fabricas';
 import {
@@ -107,7 +107,7 @@ const INSTRUTORES_DEMO = [
 ] as const;
 
 async function main() {
-  const { db, encerrar } = conectar(url!);
+  const { db, encerrar } = await conectarAplicacao(url!);
   try {
     await semearBase(db);
     console.log('Dados de referência ok.');
@@ -137,7 +137,7 @@ async function main() {
   }
 }
 
-async function semearDemo(db: ReturnType<typeof conectar>['db']) {
+async function semearDemo(db: Db) {
   const senhaHash = await hash('demo1234');
   await comAtor(db, ATOR_SISTEMA, async (tx) => {
     const usuarioDemo = async (

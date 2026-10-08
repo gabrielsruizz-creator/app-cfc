@@ -12,13 +12,11 @@ import { configurarApp } from './configurar-app';
 async function iniciar() {
   const config = lerConfig();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
-  configurarApp(app, config.CORS_ORIGENS);
+  configurarApp(app, config.CORS_ORIGENS, config.PAINEL_DIR);
   // 0.0.0.0 para o celular (Expo Go) conseguir acessar a API pela rede local.
-  await app.listen(config.PORTA, '0.0.0.0');
-  Logger.log(
-    `API ouvindo na porta ${config.PORTA} (pagamentos: ${config.PAGAMENTO_GATEWAY})`,
-    'Volante',
-  );
+  const porta = config.PORT ?? config.PORTA;
+  await app.listen(porta, '0.0.0.0');
+  Logger.log(`API ouvindo na porta ${porta} (pagamentos: ${config.PAGAMENTO_GATEWAY})`, 'Volante');
 }
 
 void iniciar();

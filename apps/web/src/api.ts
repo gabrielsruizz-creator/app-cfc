@@ -1,4 +1,7 @@
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+// VITE_API_URL (endereço completo) ou VITE_API_HOST (só o domínio, como o Render informa); senão, o proxy /api do Vite.
+const HOST = import.meta.env.VITE_API_HOST as string | undefined;
+const BASE =
+  (import.meta.env.VITE_API_URL as string | undefined) ?? (HOST ? `https://${HOST}` : '/api');
 
 const armazenamento = {
   ler: (k: string) => {
@@ -85,7 +88,7 @@ export async function api<T = unknown>(
   if (r.status === 401 && acesso && tentativa === 0 && !caminho.startsWith('/auth/')) {
     if (await renovar()) return api<T>(caminho, opcoes, 1);
     sessao.limpar();
-    window.location.assign('/entrar');
+    window.location.assign(`${import.meta.env.BASE_URL}entrar`);
   }
   if (r.status === 204) return undefined as T;
   const texto = await r.text();
