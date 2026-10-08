@@ -1,10 +1,17 @@
-import { descreverCupom, type Cupom } from '@volante/contracts';
+import type { Cupom } from '@volante/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, dataHora, mensagem, reais } from '../api';
 import { Aviso, Campo, Carregando } from './comum';
 
 type Area = 'admin' | 'autoescola';
+
+/** Ex.: "10% de desconto (até R$ 50,00)" (só tipos de @volante/contracts: o painel não carrega o zod). */
+function descreverCupom(c: Pick<Cupom, 'tipo' | 'valor' | 'descontoMaximoCentavos'>) {
+  if (c.tipo === 'valor_fixo') return `${reais(c.valor)} de desconto`;
+  const pct = `${(c.valor / 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}% de desconto`;
+  return c.descontoMaximoCentavos ? `${pct} (até ${reais(c.descontoMaximoCentavos)})` : pct;
+}
 type Opcao = { id: string; nome: string };
 
 type Form = {

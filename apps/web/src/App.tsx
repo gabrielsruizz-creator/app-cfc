@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { api, sessao } from './api';
 import { useAuth } from './auth';
@@ -17,7 +17,6 @@ import { AutoescolaCadastro } from './paginas/autoescola/Cadastro';
 import { PainelCupons } from './componentes/Cupons';
 import { PainelFinanceiro } from './componentes/Financeiro';
 import { RelatoriosAdmin, RelatoriosAutoescola } from './componentes/Relatorios';
-import { Acompanhar } from './paginas/Acompanhar';
 import {
   AutoescolaAgenda,
   AutoescolaAlunos,
@@ -33,6 +32,11 @@ import {
   AutoescolaVitrine,
 } from './paginas/autoescola/Vitrine';
 import { Entrar } from './paginas/Entrar';
+
+// Página pública com mapa (Leaflet): carregada só quando o link de acompanhamento é aberto.
+const Acompanhar = lazy(() =>
+  import('./paginas/Acompanhar').then((m) => ({ default: m.Acompanhar })),
+);
 
 function AlternarTema() {
   const [tema, setTema] = useState(() => {
@@ -225,7 +229,14 @@ export function App() {
     <Routes>
       <Route path="/" element={<Inicio />} />
       <Route path="/entrar" element={<Entrar />} />
-      <Route path="/acompanhar/:token" element={<Acompanhar />} />
+      <Route
+        path="/acompanhar/:token"
+        element={
+          <Suspense fallback={<Carregando />}>
+            <Acompanhar />
+          </Suspense>
+        }
+      />
       <Route path="/autoescola/cadastro" element={<AutoescolaCadastro />} />
       <Route path="/admin" element={<Protegido area="admin" />}>
         <Route index element={<AdminInicio />} />
