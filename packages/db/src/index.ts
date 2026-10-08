@@ -22,6 +22,7 @@ export {
   lte,
   ne,
   count,
+  ilike,
 } from 'drizzle-orm';
 export * from './teste';
 export * from './semente';
