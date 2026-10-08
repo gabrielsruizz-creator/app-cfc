@@ -39,6 +39,13 @@ e um serviço que roda a API, o worker e o painel web (em `/painel`).
 Limitações do plano gratuito: a API "dorme" após 15 min sem uso (o primeiro acesso demora ~1 min), o banco
 gratuito expira em 30 dias e fotos/documentos enviados somem quando o serviço reinicia.
 
+## Atalho no Windows
+
+Com o Docker Desktop aberto, dê dois cliques em:
+
+- **`preparar.bat`**: na primeira vez e sempre que houver atualizações (baixa, instala, atualiza o banco e os dados de demonstração);
+- **`iniciar.bat`**: liga o banco e abre as 4 janelas (API, worker, painel web e app com o QR Code).
+
 ## Como rodar no seu computador
 
 Pré-requisitos: **Node 22**, **pnpm 10** (`npm i -g pnpm`), **Docker** e o app **Expo Go** no celular.
