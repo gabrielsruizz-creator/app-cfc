@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Volante",
+    "slug": "volante",
+    "scheme": "volante",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "dev.volante.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localização para mostrar instrutores próximos e confirmar o início e o fim da aula.",
+        "NSCameraUsageDescription": "Usamos a câmera para a selfie de identificação e fotos de documentos.",
+        "NSPhotoLibraryUsageDescription": "Usamos a galeria para você enviar fotos de documentos."
+      }
+    },
+    "android": {
+      "package": "dev.volante.app",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "CAMERA"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Usamos sua localização para mostrar instrutores próximos e confirmar o início e o fim da aula."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Usamos a câmera para a selfie de identificação e fotos de documentos.",
+          "photosPermission": "Usamos a galeria para você enviar fotos de documentos."
+        }
+      ]
+    ],
+    "experiments": { "typedRoutes": false }
+  }
+}

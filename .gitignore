@@ -12,3 +12,4 @@ apps/mobile/android/
 .armazenamento/
 .DS_Store
 *.tsbuildinfo
+dist-teste/
