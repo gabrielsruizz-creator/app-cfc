@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
+import { CompartilharAula, MapaAoVivo } from '../../src/componentes/Rastreamento';
 import { StatusAula } from '../../src/componentes/StatusAula';
 import {
   Aviso,
@@ -38,7 +39,7 @@ export default function AulaAluno() {
     queryKey: ['aula', id],
     queryFn: () => api<AulaDetalhe>(`/aluno/aulas/${id}`),
     refetchInterval: (c) =>
-      ['confirmada', 'em_andamento', 'solicitada'].includes(c.state.data?.status ?? '')
+      ['confirmada', 'a_caminho', 'em_andamento', 'solicitada'].includes(c.state.data?.status ?? '')
         ? 15000
         : false,
   });
@@ -127,6 +128,8 @@ export default function AulaAluno() {
           </Texto>
         </Cartao>
       )}
+
+      {(a.status === 'a_caminho' || a.status === 'em_andamento') && <MapaAoVivo aulaId={a.id} />}
 
       {a.status === 'aguardando_confirmacao' && (
         <Aviso tipo="alerta" titulo="O instrutor finalizou a aula">
@@ -258,6 +261,10 @@ export default function AulaAluno() {
           }
         />
       </Linha>
+
+      {['solicitada', 'confirmada', 'a_caminho', 'em_andamento'].includes(a.status) && (
+        <CompartilharAula aulaId={a.id} />
+      )}
 
       {ativa && (
         <Coluna>

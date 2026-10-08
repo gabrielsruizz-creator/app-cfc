@@ -83,7 +83,9 @@ export default function Pedido() {
 
       {p.status === 'aguardando_pagamento' ? (
         <>
-          <Texto tipo="subtitulo">Pague com Pix</Texto>
+          <Texto tipo="subtitulo">
+            {p.cobranca?.metodo === 'cartao' ? 'Pague com cartão' : 'Pague com Pix'}
+          </Texto>
           <PixCobranca cobranca={p.cobranca} aoSimular={() => void q.refetch()} />
           <Botao titulo="Desistir da compra" variante="texto" aoPressionar={cancelar} />
         </>
@@ -101,6 +103,18 @@ export default function Pedido() {
             <Texto tipo="rotulo">Valor</Texto>
             <Texto>{formatarCentavos(p.valorTotalCentavos)}</Texto>
           </Linha>
+          {p.descontoCentavos > 0 && (
+            <Linha style={{ justifyContent: 'space-between' }}>
+              <Texto tipo="rotulo">Desconto{p.cupomCodigo ? ` (${p.cupomCodigo})` : ''}</Texto>
+              <Texto cor={cores.sucesso}>− {formatarCentavos(p.descontoCentavos)}</Texto>
+            </Linha>
+          )}
+          {p.cobranca?.metodo === 'cartao' && (
+            <Linha style={{ justifyContent: 'space-between' }}>
+              <Texto tipo="rotulo">Pagamento</Texto>
+              <Texto>Cartão{p.cobranca.parcelas > 1 ? ` em ${p.cobranca.parcelas}x` : ''}</Texto>
+            </Linha>
+          )}
           {p.pagoEm && (
             <Linha style={{ justifyContent: 'space-between' }}>
               <Texto tipo="rotulo">Pago em</Texto>

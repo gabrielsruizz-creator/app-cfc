@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
-import { Image, View } from 'react-native';
+import { Image, Linking, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { api, mensagemDeErro } from '../servicos/api';
 import { useTema } from '../tema/TemaProvider';
@@ -10,6 +10,9 @@ import { Aviso, Botao, Cartao, Carregando, Coluna, Texto } from './ui';
 type Cobranca = {
   id: string;
   status: string;
+  metodo?: string;
+  parcelas?: number;
+  urlPagamento?: string | null;
   valorCentavos: number;
   pixCopiaCola: string | null;
   pixQrCodeBase64: string | null;
@@ -25,6 +28,8 @@ function useContagem(ate: string | null | undefined) {
   }, []);
   if (!ate) return null;
   const resta = Math.max(0, new Date(ate).getTime() - agora);
+  const h = Math.floor(resta / 3600_000);
+  if (h >= 1) return `${h} h`;
   return `${Math.floor(resta / 60000)}:${String(Math.floor((resta % 60000) / 1000)).padStart(2, '0')}`;
 }
 
@@ -69,6 +74,53 @@ export function PixCobranca({
     }
   }
 
+  const simulacao = cobranca.ambienteTeste && (
+    <Aviso tipo="alerta" titulo="Ambiente de teste">
+      <Coluna>
+        <Texto>Este pagamento é simulado e não pode ser pago de verdade.</Texto>
+        <Botao
+          titulo="Simular pagamento"
+          compacto
+          variante="destaque"
+          carregando={simulando}
+          aoPressionar={simular}
+        />
+      </Coluna>
+    </Aviso>
+  );
+
+  if (cobranca.metodo === 'cartao') {
+    const parcelas = cobranca.parcelas ?? 1;
+    return (
+      <Coluna gap={12}>
+        {erro && <Aviso tipo="erro">{erro}</Aviso>}
+        <Cartao style={{ alignItems: 'center', gap: 12 }}>
+          <Texto tipo="subtitulo" cor={cores.primaria}>
+            {formatarCentavos(cobranca.valorCentavos)}
+          </Texto>
+          <Texto tipo="suave">
+            {parcelas > 1
+              ? `${parcelas}x de ${formatarCentavos(Math.ceil(cobranca.valorCentavos / parcelas))} sem juros no cartão`
+              : 'À vista no cartão de crédito'}
+          </Texto>
+          {cobranca.urlPagamento && (
+            <Botao
+              titulo="Pagar com cartão"
+              icone="card"
+              aoPressionar={() => void Linking.openURL(cobranca.urlPagamento!)}
+            />
+          )}
+          {contagem && <Texto tipo="pequeno">O link de pagamento vale por mais {contagem}</Texto>}
+        </Cartao>
+        <Texto tipo="pequeno" centro>
+          Os dados do cartão são digitados na página segura do meio de pagamento. A confirmação
+          aparece aqui automaticamente.
+        </Texto>
+        {simulacao}
+      </Coluna>
+    );
+  }
+
   return (
     <Coluna gap={12}>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
@@ -103,20 +155,7 @@ export function PixCobranca({
         Abra o app do seu banco, escolha Pix copia e cola ou leia o QR Code. A confirmação aparece
         aqui automaticamente.
       </Texto>
-      {cobranca.ambienteTeste && (
-        <Aviso tipo="alerta" titulo="Ambiente de teste">
-          <Coluna>
-            <Texto>Este Pix é simulado e não pode ser pago de verdade.</Texto>
-            <Botao
-              titulo="Simular pagamento"
-              compacto
-              variante="destaque"
-              carregando={simulando}
-              aoPressionar={simular}
-            />
-          </Coluna>
-        </Aviso>
-      )}
+      {simulacao}
     </Coluna>
   );
 }

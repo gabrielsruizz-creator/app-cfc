@@ -19,6 +19,7 @@ import {
   Texto,
 } from '../../../src/componentes/ui';
 import { api, mensagemDeErro } from '../../../src/servicos/api';
+import { useEnvioPosicao } from '../../../src/servicos/posicao';
 import { abrirConversa } from '../../../src/servicos/comercial';
 import { obterLocalizacao } from '../../../src/util/dispositivo';
 import { dataHora, formatarCentavos, hora } from '../../../src/util/formatos';
@@ -109,6 +110,8 @@ export default function AulaInstrutor() {
     queryKey: ['instrutor', 'aula', id],
     queryFn: () => api<AulaDetalhe>(`/instrutor/aulas/${id}`),
   });
+  const rastreando = q.data?.status === 'a_caminho' || q.data?.status === 'em_andamento';
+  const envio = useEnvioPosicao(id, rastreando);
 
   if (q.isLoading || !q.data) return <Carregando />;
   const a = q.data;
@@ -217,6 +220,35 @@ export default function AulaInstrutor() {
             />
           </Coluna>
         </Linha>
+      )}
+
+      {a.status === 'confirmada' && new Date(a.inicio).getTime() - Date.now() <= 3 * 3600_000 && (
+        <Botao
+          titulo="Estou a caminho"
+          icone="navigate"
+          variante="secundario"
+          carregando={acao === 'a-caminho'}
+          aoPressionar={() =>
+            executar('a-caminho', async () => {
+              const local = await obterLocalizacao({ exigir: true });
+              await api(`/instrutor/aulas/${a.id}/a-caminho`, {
+                corpo: local ? { posicao: local } : {},
+              });
+              await q.refetch();
+            })
+          }
+        />
+      )}
+
+      {rastreando && (
+        <Aviso
+          tipo={envio === 'sem_permissao' ? 'alerta' : 'info'}
+          titulo={envio === 'sem_permissao' ? 'Localização desligada' : 'Localização compartilhada'}
+        >
+          {envio === 'sem_permissao'
+            ? 'Permita o acesso à localização para o aluno acompanhar sua chegada.'
+            : 'O aluno (e quem ele escolher) vê sua posição enquanto esta tela estiver aberta, até o check-out.'}
+        </Aviso>
       )}
 
       {['confirmada', 'a_caminho'].includes(a.status) && (

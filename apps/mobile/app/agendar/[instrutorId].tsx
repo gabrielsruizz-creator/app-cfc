@@ -1,6 +1,7 @@
 import type {
   AulaDetalhe,
   ConfiguracoesPublicas,
+  CupomValidado,
   HorarioLivre,
   PerfilInstrutorPublico,
 } from '@volante/contracts';
@@ -54,6 +55,9 @@ export default function Agendar() {
   const [categoria, setCategoria] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [codigoCupom, setCodigoCupom] = useState('');
+  const [cupom, setCupom] = useState<CupomValidado | null>(null);
+  const [erroCupom, setErroCupom] = useState<string | null>(null);
   const chaveIdempotencia = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const mapa = useRef<MapView>(null);
 
@@ -159,6 +163,7 @@ export default function Agendar() {
           pontoEncontro: ponto,
           pontoEncontroEndereco: endereco || 'Ponto marcado no mapa',
           pontoEncontroReferencia: referencia || undefined,
+          cupom: cupom?.codigo,
         },
         cabecalhos: { 'idempotency-key': chaveIdempotencia.current },
       });
@@ -385,9 +390,55 @@ export default function Agendar() {
           <Linha style={{ justifyContent: 'space-between' }}>
             <Texto>Aula avulsa</Texto>
             <Texto tipo="subtitulo" cor={cores.primaria}>
-              {formatarCentavos(i.precoAulaCentavos)}
+              {formatarCentavos(cupom ? cupom.valorFinalCentavos : i.precoAulaCentavos)}
             </Texto>
           </Linha>
+          {cupom ? (
+            <Linha style={{ justifyContent: 'space-between' }}>
+              <Texto tipo="pequeno" cor={cores.sucesso}>
+                Cupom {cupom.codigo}: − {formatarCentavos(cupom.descontoCentavos)}
+              </Texto>
+              <Botao
+                titulo="Remover"
+                compacto
+                variante="texto"
+                aoPressionar={() => {
+                  setCupom(null);
+                  setCodigoCupom('');
+                }}
+              />
+            </Linha>
+          ) : (
+            <Linha style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1 }}>
+                <Campo
+                  rotulo="Cupom de desconto"
+                  autoCapitalize="characters"
+                  value={codigoCupom}
+                  onChangeText={setCodigoCupom}
+                  erro={erroCupom ?? undefined}
+                />
+              </View>
+              <Botao
+                titulo="Aplicar"
+                compacto
+                variante="secundario"
+                desabilitado={codigoCupom.trim().length < 3}
+                aoPressionar={async () => {
+                  setErroCupom(null);
+                  try {
+                    setCupom(
+                      await api<CupomValidado>('/aluno/cupons/validar', {
+                        corpo: { codigo: codigoCupom.trim(), instrutorId },
+                      }),
+                    );
+                  } catch (e) {
+                    setErroCupom(mensagemDeErro(e));
+                  }
+                }}
+              />
+            </Linha>
+          )}
           <Texto tipo="pequeno">
             Pagamento via Pix. O valor fica guardado e só é repassado ao instrutor depois da aula.
           </Texto>

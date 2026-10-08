@@ -1,23 +1,10 @@
-import type { ResumoPedido } from '@volante/contracts';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { api, mensagemDeErro } from './api';
 
-/** Compra um pacote (instrutor ou autoescola) e abre a tela de pagamento do pedido. */
-export async function comprarPacote(pacoteId: string, temPerfilAluno: boolean) {
-  if (!temPerfilAluno) {
-    router.push('/completar-aluno');
-    return;
-  }
-  try {
-    const pedido = await api<ResumoPedido>('/aluno/pedidos', {
-      corpo: { pacoteId },
-      cabecalhos: { 'idempotency-key': `${pacoteId}-${Date.now()}` },
-    });
-    router.push(`/pedido/${pedido.id}`);
-  } catch (e) {
-    Alert.alert('Não foi possível comprar', mensagemDeErro(e));
-  }
+/** Abre o resumo da compra do pacote (cupom e forma de pagamento). */
+export function comprarPacote(pacoteId: string, temPerfilAluno: boolean) {
+  router.push(temPerfilAluno ? `/checkout/${pacoteId}` : '/completar-aluno');
 }
 
 /** Abre (ou cria) a conversa e navega para ela. */

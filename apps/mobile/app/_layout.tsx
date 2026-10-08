@@ -42,6 +42,7 @@ function Navegacao() {
         <Stack.Screen name="evolucao" options={{ title: 'Minha evolução' }} />
         <Stack.Screen name="autoescola/[id]" options={{ title: 'Autoescola' }} />
         <Stack.Screen name="pedido/[id]" options={{ title: 'Pedido' }} />
+        <Stack.Screen name="checkout/[pacoteId]" options={{ title: 'Resumo da compra' }} />
         <Stack.Screen name="pedidos" options={{ title: 'Meus pacotes' }} />
         <Stack.Screen name="creditos" options={{ title: 'Saldo de aulas' }} />
         <Stack.Screen name="conversas" options={{ title: 'Conversas' }} />
