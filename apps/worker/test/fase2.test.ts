@@ -41,6 +41,7 @@ import { processarTudo } from '../src/outbox';
 import type { GatewayPagamentoPort } from '../src/portas/gateway-pagamento';
 import {
   acompanharPedidosAutoescola,
+  expirarPixNaoPagos,
   autoConfirmarFimDeAula,
   expirarCreditosVencidos,
 } from '../src/rotinas';
@@ -164,6 +165,38 @@ describe('fila da autoescola', () => {
     );
     expect(e!.status).toBe('concluido');
     expect(await titulos(usuario.id)).toContain('Pedido expirou');
+  });
+});
+
+describe('pacote não pago', () => {
+  it('Pix vencido cancela o pedido e o crédito', async () => {
+    const { instrutor } = await fabricarInstrutorAprovado(banco.db);
+    const { aluno } = await fabricarAluno(banco.db);
+    const pacote = await criarPacote({ instrutorId: instrutor.id }, 2);
+    const { pedido, cobranca } = await comAtor(
+      banco.db,
+      { tipo: 'aluno', alunoId: aluno.id },
+      (tx) =>
+        comprarPacote(tx, {
+          alunoId: aluno.id,
+          pacoteId: pacote.id,
+          gateway: 'simulado',
+          chaveIdempotencia: crypto.randomUUID(),
+        }),
+    );
+    await processarTudo(deps, CONSUMIDORES);
+    const depois = new Date(Date.now() + 2 * 3600_000);
+    expect(await expirarPixNaoPagos(deps, depois)).toBeGreaterThanOrEqual(1);
+    const [p] = await sistema((tx) => tx.select().from(pedidos).where(eq(pedidos.id, pedido.id)));
+    expect(p!.status).toBe('cancelado');
+    const [c] = await sistema((tx) =>
+      tx.select().from(creditosAula).where(eq(creditosAula.pedidoId, pedido.id)),
+    );
+    expect(c!.status).toBe('cancelado');
+    // pagamento que chega depois é devolvido
+    await sistema((tx) => confirmarPagamento(tx, cobranca.id));
+    const [p2] = await sistema((tx) => tx.select().from(pedidos).where(eq(pedidos.id, pedido.id)));
+    expect(p2!.status).toBe('estornado');
   });
 });
 

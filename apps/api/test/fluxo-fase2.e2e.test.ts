@@ -278,6 +278,34 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
     expect(visto.body.credito?.status ?? 'cancelado').not.toBe('ativo');
   });
 
+  it('aluno cancela pacote ainda não pago; pago não pode ser cancelado assim', async () => {
+    const aluno = await alunoCompleto(ctx);
+    const ha = auth(aluno.token);
+    const perfil = await ctx.http().get(`/publico/autoescolas/${cfc.autoescolaId}`).expect(200);
+    const pedido = await ctx
+      .http()
+      .post('/aluno/pedidos')
+      .set(ha)
+      .set('idempotency-key', 'pedido-desistencia')
+      .send({ pacoteId: perfil.body.pacotes[0].id })
+      .expect(201);
+    const cancelado = await ctx
+      .http()
+      .post(`/aluno/pedidos/${pedido.body.id}/cancelar`)
+      .set(ha)
+      .expect(201);
+    expect(cancelado.body.status).toBe('cancelado');
+    expect(cancelado.body.cobranca.status).toBe('expirada');
+    await ctx.http().post(`/aluno/pedidos/${pedido.body.id}/cancelar`).set(ha).expect(409);
+    // outro aluno não cancela o pedido de ninguém
+    const outro = await alunoCompleto(ctx);
+    await ctx
+      .http()
+      .post(`/aluno/pedidos/${pedido.body.id}/cancelar`)
+      .set(auth(outro.token))
+      .expect(404);
+  });
+
   it('chat aluno ↔ autoescola com contagem de não lidas e isolamento', async () => {
     const aluno = await alunoCompleto(ctx);
     const ha = auth(aluno.token);

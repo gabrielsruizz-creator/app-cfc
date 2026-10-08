@@ -19,6 +19,7 @@ import {
   sql,
 } from '@volante/db';
 import {
+  cancelarPedidoNaoPago,
   carregarAulaParaAlterar,
   concluirAula,
   encerrarComEstornoTotal,
@@ -52,7 +53,32 @@ export async function expirarPixNaoPagos(deps: Dependencias, agora = new Date())
   for (const { aulaId } of vencidas) {
     await comAtor(deps.db, ATOR_SISTEMA, (tx) => expirarAulaNaoPaga(tx, aulaId));
   }
-  return vencidas.length;
+  // pacotes (sem aula ainda): o pedido é cancelado
+  const pacotes = await comAtor(deps.db, ATOR_SISTEMA, (tx) =>
+    tx
+      .selectDistinct({ pedidoId: pedidos.id })
+      .from(pedidos)
+      .innerJoin(cobrancas, eq(cobrancas.pedidoId, pedidos.id))
+      .where(
+        and(
+          eq(pedidos.tipo, 'pacote'),
+          eq(pedidos.status, 'aguardando_pagamento'),
+          inArray(cobrancas.status, [
+            'pendente_envio',
+            'aguardando_pagamento',
+            'pendente_configuracao',
+            'falhou',
+          ]),
+          lt(cobrancas.pixExpiraEm, agora),
+        ),
+      ),
+  );
+  for (const { pedidoId } of pacotes) {
+    await comAtor(deps.db, ATOR_SISTEMA, (tx) =>
+      cancelarPedidoNaoPago(tx, pedidoId, 'Pagamento não realizado no prazo'),
+    );
+  }
+  return vencidas.length + pacotes.length;
 }
 
 /** Solicitações não respondidas pelo instrutor no prazo são encerradas com estorno integral. */

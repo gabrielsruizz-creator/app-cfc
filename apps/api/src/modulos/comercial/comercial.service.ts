@@ -32,6 +32,7 @@ import {
   ErroDominio,
   naoEncontrado,
   solicitarAulaComCredito,
+  cancelarPedidoNaoPago,
 } from '@volante/dominio';
 import { CONFIG, type Config } from '../../config';
 import { BancoService } from '../../nucleo/banco.service';
@@ -198,6 +199,23 @@ export class ComercialService {
         .limit(100),
     );
     return Promise.all(ids.map((p) => this.pedido(ator, p.id)));
+  }
+
+  /** O aluno desiste de um pacote ainda não pago (o Pix é cancelado). */
+  async cancelarPedido(ator: Ator, pedidoId: string): Promise<ResumoPedido> {
+    await this.banco.comAtor(ator, async (tx) => {
+      const [p] = await tx.select().from(pedidos).where(eq(pedidos.id, pedidoId));
+      if (!p) throw naoEncontrado('pedido');
+      await this.banco.elevarParaSistema(tx);
+      const ok = await cancelarPedidoNaoPago(tx, p.id, 'Cancelado pelo aluno antes do pagamento');
+      if (!ok)
+        throw new ErroDominio(
+          'pedido_nao_cancelavel',
+          'Só é possível cancelar pedidos que ainda não foram pagos',
+          'conflito',
+        );
+    });
+    return this.pedido(ator, pedidoId);
   }
 
   async pedido(ator: Ator, pedidoId: string): Promise<ResumoPedido> {

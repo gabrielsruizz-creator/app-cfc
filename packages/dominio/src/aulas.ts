@@ -308,6 +308,37 @@ export async function expirarAulaNaoPaga(tx: Tx, aulaId: string) {
   return aula;
 }
 
+/**
+ * Pedido de pacote ainda não pago: cancela (Pix vencido ou desistência do aluno). Se o Pix
+ * for pago depois, confirmarPagamento devolve o valor automaticamente.
+ */
+export async function cancelarPedidoNaoPago(tx: Tx, pedidoId: string, motivo: string) {
+  const [p] = await tx.select().from(pedidos).where(eq(pedidos.id, pedidoId)).for('update');
+  if (!p || p.tipo !== 'pacote' || p.status !== 'aguardando_pagamento') return false;
+  await mudarStatusPedido(tx, p, 'cancelado', { motivo });
+  await tx.update(creditosAula).set({ status: 'cancelado' }).where(eq(creditosAula.pedidoId, p.id));
+  const pendentes = await tx
+    .update(cobrancas)
+    .set({ status: 'expirada' })
+    .where(
+      and(
+        eq(cobrancas.pedidoId, p.id),
+        sql`${cobrancas.status} in ('pendente_envio', 'aguardando_pagamento', 'pendente_configuracao')`,
+      ),
+    )
+    .returning({ id: cobrancas.id });
+  for (const c of pendentes) {
+    await publicarEvento(tx, {
+      tipo: 'cobranca.expirada',
+      agregadoTipo: 'cobranca',
+      agregadoId: c.id,
+      autoescolaId: p.autoescolaId,
+      payload: { cobrancaId: c.id, pedidoId: p.id },
+    });
+  }
+  return true;
+}
+
 type StatusEncerramento = 'recusada' | 'expirada' | 'cancelada' | 'nao_compareceu_instrutor';
 
 const motivoEstornoPorStatus: Record<StatusEncerramento, MotivoEstorno> = {

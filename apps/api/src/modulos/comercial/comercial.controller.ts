@@ -137,6 +137,11 @@ export class ComercialController {
     return this.servico.pedido(atorAluno(s), id);
   }
 
+  @Post('aluno/pedidos/:id/cancelar')
+  cancelar(@SessaoAtual() s: Sessao, @Param('id', ParseUUIDPipe) id: string) {
+    return this.servico.cancelarPedido(atorAluno(s), id);
+  }
+
   @Post('aluno/pedidos/:id/avaliacao')
   async avaliar(
     @SessaoAtual() s: Sessao,
