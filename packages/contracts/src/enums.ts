@@ -193,3 +193,29 @@ export type TipoRegistroExterno = (typeof TIPOS_REGISTRO_EXTERNO)[number];
 
 export const SISTEMAS_EXTERNOS = ['cfc_plus'] as const;
 export type SistemaExterno = (typeof SISTEMAS_EXTERNOS)[number];
+
+// ---------- Fase 2 ----------
+
+export const STATUS_VINCULO = ['convidado', 'ativo', 'recusado', 'encerrado'] as const;
+export type StatusVinculo = (typeof STATUS_VINCULO)[number];
+
+export const TIPOS_CHAVE_PIX = ['cpf', 'cnpj', 'email', 'telefone', 'aleatoria'] as const;
+export const tipoChavePix = z.enum(TIPOS_CHAVE_PIX);
+export type TipoChavePix = z.infer<typeof tipoChavePix>;
+
+export const STATUS_SAQUE = [
+  'solicitado',
+  'pendente_configuracao',
+  'processando',
+  'concluido',
+  'falhou',
+] as const;
+export type StatusSaque = (typeof STATUS_SAQUE)[number];
+
+export const ALVOS_DENUNCIA = ['instrutor', 'autoescola', 'aluno', 'avaliacao'] as const;
+export const alvoDenuncia = z.enum(ALVOS_DENUNCIA);
+export const STATUS_DENUNCIA = ['aberta', 'em_analise', 'resolvida', 'descartada'] as const;
+
+export const STATUS_DISPUTA = ['aberta', 'resolvida'] as const;
+export const DECISOES_DISPUTA = ['estorno_total', 'estorno_parcial', 'negada'] as const;
+export const decisaoDisputa = z.enum(DECISOES_DISPUTA);

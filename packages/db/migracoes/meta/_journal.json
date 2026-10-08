@@ -15,6 +15,20 @@
       "when": 1791469725580,
       "tag": "0001_seguranca",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791476577311,
+      "tag": "0002_fase2",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791476578407,
+      "tag": "0003_seguranca_fase2",
+      "breakpoints": true
     }
   ]
 }

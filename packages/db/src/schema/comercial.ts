@@ -503,3 +503,75 @@ export const notasFiscais = pgTable(
 );
 
 export const CATEGORIAS = CATEGORIAS_CNH;
+
+// ---------- Fase 2: recebimento e saques ----------
+
+export const contasRecebimento = pgTable(
+  'contas_recebimento',
+  {
+    id: idPk(),
+    titularTipo: text().notNull(),
+    instrutorId: uuid().references(() => instrutores.id),
+    autoescolaId: uuid().references(() => autoescolas.id),
+    tipoChavePix: text().notNull(),
+    /** Chave Pix cifrada (AES-256-GCM) pela aplicação. */
+    chavePixCifrada: text().notNull(),
+    chavePixMascarada: text().notNull(),
+    titularNome: text().notNull(),
+    titularDocumento: text().notNull(),
+    gatewaySubcontaId: text(),
+    ativa: boolean().notNull().default(true),
+    ...carimbos,
+  },
+  (t) => [
+    checkValores('contas_rec_titular_ck', t.titularTipo, VENDEDORES),
+    checkValores('contas_rec_chave_ck', t.tipoChavePix, [
+      'cpf',
+      'cnpj',
+      'email',
+      'telefone',
+      'aleatoria',
+    ]),
+    check('contas_rec_dono_ck', sql`num_nonnulls(${t.instrutorId}, ${t.autoescolaId}) = 1`),
+    uniqueIndex('contas_rec_instrutor_uk')
+      .on(t.instrutorId)
+      .where(sql`${t.ativa} and ${t.instrutorId} is not null`),
+    uniqueIndex('contas_rec_autoescola_uk')
+      .on(t.autoescolaId)
+      .where(sql`${t.ativa} and ${t.autoescolaId} is not null`),
+  ],
+);
+
+export const saques = pgTable(
+  'saques',
+  {
+    id: idPk(),
+    contaId: uuid()
+      .notNull()
+      .references(() => contasFinanceiras.id),
+    instrutorId: uuid(),
+    autoescolaId: uuid(),
+    contaRecebimentoId: uuid()
+      .notNull()
+      .references(() => contasRecebimento.id),
+    gateway: text().notNull(),
+    valorCentavos: bigint({ mode: 'number' }).notNull(),
+    status: text().notNull().default('solicitado'),
+    gatewayRef: text(),
+    ultimoErro: text(),
+    solicitadoPor: uuid(),
+    concluidoEm: instanteTz(),
+    ...carimbos,
+  },
+  (t) => [
+    check('saques_valor_ck', sql`${t.valorCentavos} > 0`),
+    checkValores('saques_status_ck', t.status, [
+      'solicitado',
+      'pendente_configuracao',
+      'processando',
+      'concluido',
+      'falhou',
+    ]),
+    index('saques_conta_idx').on(t.contaId),
+  ],
+);

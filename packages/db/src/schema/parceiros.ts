@@ -296,3 +296,65 @@ export const habilidades = pgTable(
   },
   (t) => [uniqueIndex('habilidades_codigo_uk').on(t.codigo)],
 );
+
+// ---------- Fase 2: vitrine e vínculos ----------
+
+export const autoescolaHorarios = pgTable(
+  'autoescola_horarios',
+  {
+    id: idPk(),
+    autoescolaId: uuid()
+      .notNull()
+      .references(() => autoescolas.id),
+    diaSemana: smallint().notNull(),
+    abre: time().notNull(),
+    fecha: time().notNull(),
+  },
+  (t) => [
+    check('autoescola_horarios_dia_ck', sql`${t.diaSemana} between 0 and 6`),
+    check('autoescola_horarios_ck', sql`${t.fecha} > ${t.abre}`),
+    index('autoescola_horarios_idx').on(t.autoescolaId),
+  ],
+);
+
+export const autoescolaFotos = pgTable(
+  'autoescola_fotos',
+  {
+    id: idPk(),
+    autoescolaId: uuid()
+      .notNull()
+      .references(() => autoescolas.id),
+    arquivoId: uuid()
+      .notNull()
+      .references(() => arquivos.id),
+    ordem: smallint().notNull().default(0),
+    legenda: text(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index('autoescola_fotos_idx').on(t.autoescolaId, t.ordem)],
+);
+
+export const instrutorVinculos = pgTable(
+  'instrutor_vinculos',
+  {
+    id: idPk(),
+    instrutorId: uuid()
+      .notNull()
+      .references(() => instrutores.id),
+    autoescolaId: uuid()
+      .notNull()
+      .references(() => autoescolas.id),
+    status: text().notNull().default('convidado'),
+    convidadoPor: uuid().references(() => usuarios.id),
+    inicioEm: instanteTz(),
+    fimEm: instanteTz(),
+    ...carimbos,
+  },
+  (t) => [
+    checkValores('vinculos_status_ck', t.status, ['convidado', 'ativo', 'recusado', 'encerrado']),
+    uniqueIndex('vinculos_ativos_uk')
+      .on(t.instrutorId, t.autoescolaId)
+      .where(sql`${t.status} in ('convidado', 'ativo')`),
+    index('vinculos_autoescola_idx').on(t.autoescolaId, t.status),
+  ],
+);

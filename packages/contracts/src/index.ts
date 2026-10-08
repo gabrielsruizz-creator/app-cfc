@@ -7,3 +7,6 @@ export * from './aulas';
 export * from './autoescolas';
 export * from './admin';
 export * from './eventos';
+export * from './pacotes';
+export * from './comunicacao';
+export * from './financeiro';

@@ -25,7 +25,9 @@ import {
 import { calcularHorariosLivres, dataLocal, type Intervalo } from './agenda';
 import { gerarCodigoCheckin, gerarCodigoPedido } from './codigos';
 import { codigoErroPostgres, ErroDominio, naoEncontrado } from './erros';
+import { calcularAceiteAte, movimentarCredito } from './aulas';
 import { calcularComissao, regraComissaoVigente } from './financeiro';
+import { validarCreditoParaInstrutor } from './pacotes';
 
 export async function carregarInstrutorAtivo(tx: Executor, instrutorId: string) {
   const [linha] = await tx
@@ -272,4 +274,115 @@ export async function solicitarAulaAvulsa(tx: Tx, d: DadosSolicitacao) {
     payload: { cobrancaId: cobranca!.id },
   });
   return { pedido: pedido!, aula: aula!, cobranca: cobranca! };
+}
+
+export type DadosAgendamentoComCredito = Omit<DadosSolicitacao, 'gateway' | 'chaveIdempotencia'> & {
+  creditoId: string;
+};
+
+/**
+ * Aluno agenda usando o saldo de um pacote (de instrutor ou de autoescola). Não há cobrança:
+ * a aula nasce "solicitada" e reserva 1 aula do saldo.
+ */
+export async function solicitarAulaComCredito(tx: Tx, d: DadosAgendamentoComCredito) {
+  const agora = d.agora ?? new Date();
+  const [credito] = await tx
+    .select()
+    .from(creditosAula)
+    .where(and(eq(creditosAula.id, d.creditoId), eq(creditosAula.alunoId, d.alunoId)))
+    .for('update');
+  if (!credito) throw naoEncontrado('credito');
+  await validarCreditoParaInstrutor(tx, credito, d.instrutorId);
+  if (!credito.categorias.some((c) => c === d.categoria || c.includes(d.categoria))) {
+    throw new ErroDominio('categoria_nao_atendida', 'Este pacote não inclui essa categoria');
+  }
+
+  const { instrutor } = await carregarInstrutorAtivo(tx, d.instrutorId);
+  if (instrutor.status !== 'aprovado') {
+    throw new ErroDominio('instrutor_indisponivel', 'Este instrutor não está atendendo no momento');
+  }
+  const livres = await horariosLivresInstrutor(
+    tx,
+    instrutor,
+    dataLocal(d.inicio, instrutor.fusoHorario),
+    agora,
+  );
+  const slot = livres.find((l) => l.inicio.getTime() === d.inicio.getTime());
+  if (!slot)
+    throw new ErroDominio(
+      'horario_indisponivel',
+      'Esse horário não está mais disponível. Escolha outro.',
+      'conflito',
+    );
+
+  const [pedido] = await tx.select().from(pedidos).where(eq(pedidos.id, credito.pedidoId));
+  const cfg = await lerConfiguracoes(tx);
+  const [veiculo] = instrutor.forneceVeiculo
+    ? await tx
+        .select({ id: veiculos.id })
+        .from(veiculos)
+        .where(and(eq(veiculos.instrutorId, instrutor.id), eq(veiculos.ativo, true)))
+        .limit(1)
+    : [];
+
+  let aula;
+  try {
+    [aula] = await tx
+      .insert(aulas)
+      .values({
+        alunoId: d.alunoId,
+        instrutorId: instrutor.id,
+        autoescolaId: credito.autoescolaId,
+        pedidoId: credito.pedidoId,
+        creditoId: credito.id,
+        veiculoId: veiculo?.id ?? null,
+        categoria: d.categoria,
+        inicio: slot.inicio,
+        fim: slot.fim,
+        valorCentavos: Math.round(pedido!.valorTotalCentavos / pedido!.quantidadeAulas),
+        pontoEncontro: d.pontoEncontro,
+        pontoEncontroEndereco: d.pontoEncontroEndereco,
+        pontoEncontroReferencia: d.pontoEncontroReferencia ?? null,
+        status: 'solicitada',
+        aceiteAte: calcularAceiteAte(agora, slot.inicio, {
+          prazoAceiteHoras: cfg['aula.prazo_aceite_horas'],
+          limiteAntesInicioHoras: cfg['aula.aceite_limite_antes_inicio_horas'],
+        }),
+        codigoCheckin: gerarCodigoCheckin(),
+        politicaCancelamento: {
+          gratisAteHoras: cfg['cancelamento.gratis_ate_horas'],
+          multaBp: cfg['cancelamento.multa_bp'],
+        },
+      })
+      .returning();
+  } catch (erro) {
+    const pg = codigoErroPostgres(erro);
+    if (pg.code === '23P01') {
+      throw new ErroDominio(
+        'horario_indisponivel',
+        pg.constraint === 'aulas_sem_conflito_aluno'
+          ? 'Você já tem uma aula nesse horário.'
+          : 'Esse horário acabou de ser reservado. Escolha outro.',
+        'conflito',
+      );
+    }
+    throw erro;
+  }
+  await movimentarCredito(tx, credito.id, aula!.id, 'reserva');
+  await tx.insert(aulaHistorico).values({
+    aulaId: aula!.id,
+    alunoId: d.alunoId,
+    instrutorId: instrutor.id,
+    autoescolaId: credito.autoescolaId,
+    paraStatus: 'solicitada',
+    motivo: 'Agendada com saldo de pacote',
+  });
+  await publicarEvento(tx, {
+    tipo: 'aula.solicitada',
+    agregadoTipo: 'aula',
+    agregadoId: aula!.id,
+    autoescolaId: credito.autoescolaId,
+    payload: { aulaId: aula!.id, alunoId: d.alunoId, instrutorId: instrutor.id },
+  });
+  return aula!;
 }

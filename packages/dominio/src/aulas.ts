@@ -19,7 +19,14 @@ import {
 } from '@volante/db';
 import type { Ponto } from '@volante/db';
 import { ErroDominio, naoEncontrado } from './erros';
-import { estornarValor, liberarValor, registrarRetencao, type MotivoEstorno } from './financeiro';
+import {
+  estornarValor,
+  liberarValor,
+  registrarRetencao,
+  retidoDoPedido,
+  type MotivoEstorno,
+} from './financeiro';
+import { ativarPacotePago } from './pacotes';
 
 export type Aula = typeof aulas.$inferSelect;
 type Pedido = typeof pedidos.$inferSelect;
@@ -38,7 +45,7 @@ export const TRANSICOES_AULA: Record<StatusAula, readonly StatusAula[]> = {
   ],
   a_caminho: ['em_andamento', 'cancelada', 'nao_compareceu_aluno'],
   em_andamento: ['aguardando_confirmacao'],
-  aguardando_confirmacao: ['concluida'],
+  aguardando_confirmacao: ['concluida', 'cancelada'],
   concluida: [],
   recusada: [],
   expirada: [],
@@ -100,7 +107,7 @@ export async function mudarStatusAula(
   return atualizada;
 }
 
-async function mudarStatusPedido(
+export async function mudarStatusPedido(
   tx: Tx,
   pedido: Pedido,
   para: Pedido['status'],
@@ -125,7 +132,7 @@ async function mudarStatusPedido(
   return p!;
 }
 
-async function carregarPedido(tx: Tx, pedidoId: string) {
+export async function carregarPedido(tx: Tx, pedidoId: string) {
   const [p] = await tx.select().from(pedidos).where(eq(pedidos.id, pedidoId)).for('update');
   if (!p) throw naoEncontrado('pedido');
   return p;
@@ -203,6 +210,18 @@ export async function confirmarPagamento(tx: Tx, cobrancaId: string, agora = new
     payload: { cobrancaId: cobranca.id, pedidoId: pedido.id },
   });
   await emitirRecibo(tx, pedido, agora);
+
+  if (pedido.tipo === 'pacote') {
+    if (pedidoEstavaCancelado) {
+      await estornarValor(tx, pedido, pedido.valorTotalCentavos, { motivo: 'pedido_expirado' });
+      await mudarStatusPedido(tx, pedido, 'estornado', {
+        motivo: 'Pagamento recebido após o prazo',
+      });
+      return { jaProcessada: false, estornado: true };
+    }
+    await ativarPacotePago(tx, pedido, agora);
+    return { jaProcessada: false, estornado: false };
+  }
 
   const aulasDoPedido = await tx
     .select()
@@ -289,10 +308,13 @@ export async function expirarAulaNaoPaga(tx: Tx, aulaId: string) {
   return aula;
 }
 
-const motivoEstornoPorStatus: Record<'recusada' | 'expirada' | 'cancelada', MotivoEstorno> = {
+type StatusEncerramento = 'recusada' | 'expirada' | 'cancelada' | 'nao_compareceu_instrutor';
+
+const motivoEstornoPorStatus: Record<StatusEncerramento, MotivoEstorno> = {
   recusada: 'aula_recusada',
   expirada: 'aula_expirada',
   cancelada: 'cancelamento',
+  nao_compareceu_instrutor: 'disputa',
 };
 
 /**
@@ -302,8 +324,13 @@ const motivoEstornoPorStatus: Record<'recusada' | 'expirada' | 'cancelada', Moti
 export async function encerrarComEstornoTotal(
   tx: Tx,
   aula: Aula,
-  para: 'recusada' | 'expirada' | 'cancelada',
-  opcoes: { motivo: string; atorUsuarioId?: string | null; canceladaPor?: string },
+  para: StatusEncerramento,
+  opcoes: {
+    motivo: string;
+    atorUsuarioId?: string | null;
+    canceladaPor?: string;
+    motivoEstorno?: MotivoEstorno;
+  },
 ) {
   const agora = new Date();
   const atualizada = await mudarStatusAula(tx, aula, para, {
@@ -322,7 +349,7 @@ export async function encerrarComEstornoTotal(
   if (pedido.tipo === 'aula_avulsa') {
     await movimentarCredito(tx, aula.creditoId, aula.id, 'devolucao', 'estornado');
     await estornarValor(tx, pedido, aula.valorCentavos, {
-      motivo: motivoEstornoPorStatus[para],
+      motivo: opcoes.motivoEstorno ?? motivoEstornoPorStatus[para],
       aulaId: aula.id,
       solicitadoPor: opcoes.atorUsuarioId,
     });
@@ -457,17 +484,19 @@ export async function concluirAula(
   });
   await movimentarCredito(tx, aula.creditoId, aula.id, 'consumo');
   const pedido = await carregarPedido(tx, aula.pedidoId);
+  const [credito] = await tx.select().from(creditosAula).where(eq(creditosAula.id, aula.creditoId));
   if (pedido.vendedorTipo === 'instrutor') {
+    // Pacote: libera uma parte por aula; na última, libera todo o restante (sem sobras de arredondamento).
+    const restante = await retidoDoPedido(tx, pedido);
     const valor =
-      pedido.tipo === 'aula_avulsa'
-        ? pedido.valorTotalCentavos
-        : Math.round(pedido.valorTotalCentavos / pedido.quantidadeAulas);
+      pedido.tipo === 'aula_avulsa' || credito?.status === 'esgotado'
+        ? restante
+        : Math.min(restante, Math.round(pedido.valorTotalCentavos / pedido.quantidadeAulas));
     await liberarValor(tx, pedido, valor, {
       aulaId: aula.id,
       descricao: `Aula de ${aula.inicio.toISOString().slice(0, 10)} — pedido ${pedido.codigo}`,
     });
   }
-  const [credito] = await tx.select().from(creditosAula).where(eq(creditosAula.id, aula.creditoId));
   if (credito?.status === 'esgotado') await mudarStatusPedido(tx, pedido, 'encerrado');
 
   const minutos = Math.round((aula.fim.getTime() - aula.inicio.getTime()) / 60_000);

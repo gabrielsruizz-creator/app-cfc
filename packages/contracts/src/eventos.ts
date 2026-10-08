@@ -50,6 +50,18 @@ export const payloadsEventos = {
   'pedido.confirmado': z.object({ pedidoId: id, alunoId: id, autoescolaId: id }),
   'pedido.recusado': z.object({ pedidoId: id, alunoId: id, autoescolaId: id, motivo: z.string() }),
   'pedido.expirado': z.object({ pedidoId: id, alunoId: id, autoescolaId: id }),
+  'pedido.lembrete': z.object({ pedidoId: id, autoescolaId: id }),
+  'matricula.criada': z.object({ matriculaId: id, pedidoId: id, alunoId: id, autoescolaId: id }),
+  'saque.solicitado': z.object({ saqueId: id }),
+  'saque.concluido': z.object({ saqueId: id }),
+  'mensagem.enviada': z.object({
+    mensagemId: id,
+    conversaId: id,
+    destinatarioUsuarioIds: z.array(id),
+  }),
+  'instrutor.convidado': z.object({ vinculoId: id, instrutorId: id, autoescolaId: id }),
+  'disputa.aberta': z.object({ disputaId: id, aulaId: id }),
+  'disputa.resolvida': z.object({ disputaId: id, aulaId: id, decisao: z.string() }),
   'notificacao.criada': z.object({ notificacaoId: id }),
 } as const;
 
