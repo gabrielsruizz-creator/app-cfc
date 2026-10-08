@@ -176,6 +176,13 @@ export const integracoesAutoescola = pgTable(
     status: text().notNull().default('nao_conectada'),
     configuracaoCifrada: bytea(),
     conectadaEm: instanteTz(),
+    /** [F4] Endereço do sistema externo (a chave fica só na configuração cifrada). */
+    url: text(),
+    chaveMascarada: text(),
+    /** Nome da autoescola como o sistema externo informou no teste de conexão. */
+    nomeNoSistema: text(),
+    testadaEm: instanteTz(),
+    ultimoErro: text(),
     ...carimbos,
   },
   (t) => [
@@ -183,6 +190,7 @@ export const integracoesAutoescola = pgTable(
     checkValores('integracoes_sistema_ck', t.sistema, SISTEMAS_EXTERNOS),
     checkValores('integracoes_status_ck', t.status, [
       'nao_conectada',
+      'testando',
       'conectada',
       'erro',
       'desativada',

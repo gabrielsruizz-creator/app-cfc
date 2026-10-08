@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CfcPlusHttp } from './adaptadores/cfc-plus-http';
 import { CfcPlusNaoConfigurado } from './adaptadores/cfc-plus-nao-configurado';
 import { GatewayAsaas } from './adaptadores/gateway-asaas';
 import { GatewayNaoConfigurado } from './adaptadores/gateway-nao-configurado';
@@ -16,6 +17,8 @@ const esquema = z.object({
   PUSH_PROVEDOR: z.enum(['nenhum', 'expo']).default('nenhum'),
   EXPO_ACCESS_TOKEN: z.string().optional(),
   INTERVALO_ROTINAS_SEG: z.coerce.number().default(60),
+  /** desligado: nada é enviado ao CFC Plus (fica pendente de configuração). */
+  CFC_PLUS: z.enum(['ligado', 'desligado']).default('ligado'),
 });
 
 export type ConfigWorker = z.infer<typeof esquema>;
@@ -39,7 +42,7 @@ export function montarDependencias(db: Db, config: ConfigWorker): Dependencias {
       config.PUSH_PROVEDOR === 'expo'
         ? new PushExpo(config.EXPO_ACCESS_TOKEN)
         : new PushNaoConfigurado(),
-    cfcPlus: new CfcPlusNaoConfigurado(),
+    cfcPlus: config.CFC_PLUS === 'ligado' ? new CfcPlusHttp() : new CfcPlusNaoConfigurado(),
     log: logConsole,
   };
 }

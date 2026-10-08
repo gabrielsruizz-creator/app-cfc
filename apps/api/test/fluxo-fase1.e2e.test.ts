@@ -351,7 +351,7 @@ describe('Fase 1 — fluxo completo pela API', () => {
       .set('x-autoescola-id', autoescolaId)
       .expect(200);
     expect(integracoes.body).toEqual([
-      expect.objectContaining({ sistema: 'cfc_plus', status: 'em_breve' }),
+      expect.objectContaining({ sistema: 'cfc_plus', status: 'nao_conectada' }),
     ]);
 
     const intruso = await cadastrar(ctx, 'Intruso');

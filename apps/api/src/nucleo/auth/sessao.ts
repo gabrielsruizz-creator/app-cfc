@@ -33,7 +33,8 @@ export const SessaoOpcional = createParamDecorator(
   },
 );
 
-const negar = (codigo: string, mensagem: string) => new ForbiddenException({ codigo, mensagem });
+export const negar = (codigo: string, mensagem: string) =>
+  new ForbiddenException({ codigo, mensagem });
 
 export function atorUsuario(s: Sessao): Ator {
   return { tipo: 'anonimo', usuarioId: s.usuarioId };

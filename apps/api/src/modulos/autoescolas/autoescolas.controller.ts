@@ -40,9 +40,4 @@ export class AutoescolasController {
   enviarAnalise(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') id?: string) {
     return this.servico.enviarParaAnalise(atorAutoescola(s, id));
   }
-
-  @Get('autoescola/integracoes')
-  integracoes(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') id?: string) {
-    return this.servico.integracoes(atorAutoescola(s, id));
-  }
 }

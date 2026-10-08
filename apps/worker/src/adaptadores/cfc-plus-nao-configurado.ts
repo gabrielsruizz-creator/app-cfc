@@ -1,11 +1,17 @@
 import type { CfcPlusPort, ResultadoCfcPlus } from '../portas/cfc-plus';
 
-/** Único adaptador do CFC Plus até a Fase 4: registra a operação como pendente, sem fingir sucesso. */
+/** Usado quando a integração está desligada no worker: registra como pendente, sem fingir sucesso. */
 export class CfcPlusNaoConfigurado implements CfcPlusPort {
-  async executar(): Promise<ResultadoCfcPlus> {
-    return {
+  private pendente(): Promise<ResultadoCfcPlus> {
+    return Promise.resolve({
       status: 'pendente_configuracao',
-      motivo: 'Integração com o CFC Plus ainda não disponível',
-    };
+      motivo: 'Integração com o CFC Plus desligada neste ambiente',
+    });
+  }
+  testar() {
+    return this.pendente();
+  }
+  enviarEvento() {
+    return this.pendente();
   }
 }

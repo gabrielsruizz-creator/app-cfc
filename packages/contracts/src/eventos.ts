@@ -64,6 +64,9 @@ export const payloadsEventos = {
   'disputa.aberta': z.object({ disputaId: id, aulaId: id }),
   'disputa.resolvida': z.object({ disputaId: id, aulaId: id, decisao: z.string() }),
   'notificacao.criada': z.object({ notificacaoId: id }),
+  // Fase 4: integração com o CFC Plus
+  'integracao.testar': z.object({ autoescolaId: id }),
+  'integracao.sincronizar': z.object({ autoescolaId: id }),
 } as const;
 
 export type TipoEvento = keyof typeof payloadsEventos;

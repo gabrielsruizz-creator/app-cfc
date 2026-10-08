@@ -43,6 +43,13 @@
       "when": 1791488356533,
       "tag": "0005_seguranca_fase3",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791491455485,
+      "tag": "0006_fase4",
+      "breakpoints": true
     }
   ]
 }

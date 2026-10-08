@@ -3,7 +3,6 @@ import {
   TIPOS_DOCUMENTO_AUTOESCOLA,
   type CadastroAutoescola,
   type EnviarDocumentoAutoescola,
-  type IntegracaoDisponivel,
 } from '@volante/contracts';
 import {
   and,
@@ -14,7 +13,6 @@ import {
   desc,
   documentosLegais,
   eq,
-  integracoesAutoescola,
   ne,
   publicarEvento,
   type Ator,
@@ -190,25 +188,4 @@ export class AutoescolasService {
   }
 
   /** Integrações disponíveis. O CFC Plus aparece como "em breve" até a Fase 4. */
-  async integracoes(ator: Ator): Promise<IntegracaoDisponivel[]> {
-    const linhas = await this.banco.comAtor(ator, (tx) =>
-      tx
-        .select()
-        .from(integracoesAutoescola)
-        .where(eq(integracoesAutoescola.autoescolaId, ator.autoescolaId!)),
-    );
-    const cfcPlus = linhas.find((l) => l.sistema === 'cfc_plus');
-    return [
-      {
-        sistema: 'cfc_plus',
-        nome: 'CFC Plus',
-        descricao:
-          'Envie automaticamente os alunos e pedidos do app para o seu ERP de autoescola: matrícula, agenda e financeiro sem digitação.',
-        status:
-          cfcPlus && cfcPlus.status !== 'nao_conectada'
-            ? (cfcPlus.status as IntegracaoDisponivel['status'])
-            : 'em_breve',
-      },
-    ];
-  }
 }

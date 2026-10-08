@@ -34,6 +34,6 @@ export const integracaoDisponivel = z.object({
   sistema: z.string(),
   nome: z.string(),
   descricao: z.string(),
-  status: z.enum(['em_breve', 'nao_conectada', 'conectada', 'erro', 'desativada']),
+  status: z.enum(['em_breve', 'nao_conectada', 'testando', 'conectada', 'erro', 'desativada']),
 });
 export type IntegracaoDisponivel = z.infer<typeof integracaoDisponivel>;

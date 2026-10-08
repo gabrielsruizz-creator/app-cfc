@@ -6,6 +6,7 @@ import { ArquivosModule } from './modulos/arquivos/arquivos.module';
 import { ChatModule } from './modulos/chat/chat.module';
 import { ComercialModule } from './modulos/comercial/comercial.module';
 import { FinanceiroModule } from './modulos/financeiro/financeiro.module';
+import { IntegracoesModule } from './modulos/integracoes/integracoes.module';
 import { ModeracaoModule } from './modulos/moderacao/moderacao.module';
 import { PromocoesModule } from './modulos/promocoes/promocoes.module';
 import { RastreamentoModule } from './modulos/rastreamento/rastreamento.module';
@@ -45,6 +46,7 @@ import { SaudeController } from './saude.controller';
     PromocoesModule,
     RastreamentoModule,
     RelatoriosModule,
+    IntegracoesModule,
   ],
   controllers: [SaudeController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
