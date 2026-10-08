@@ -47,7 +47,11 @@ export class ModeracaoService {
     return den!;
   }
 
-  async abrirDisputa(ator: Ator, papel: 'aluno' | 'instrutor', d: { aulaId: string; motivo: string; descricao: string }) {
+  async abrirDisputa(
+    ator: Ator,
+    papel: 'aluno' | 'instrutor',
+    d: { aulaId: string; motivo: string; descricao: string },
+  ) {
     return this.banco.comAtor(ator, async (tx) => {
       // RLS garante que a aula é do usuário; depois o domínio grava como sistema.
       const [a] = await tx.select({ id: aulas.id }).from(aulas).where(eq(aulas.id, d.aulaId));
@@ -71,15 +75,30 @@ export class ModeracaoService {
     );
   }
 
-  async resolverDenuncia(ator: Ator, id: string, d: { status: 'resolvida' | 'descartada'; resolucao: string }) {
+  async resolverDenuncia(
+    ator: Ator,
+    id: string,
+    d: { status: 'resolvida' | 'descartada'; resolucao: string },
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
       const r = await tx
         .update(denuncias)
-        .set({ status: d.status, resolucao: d.resolucao, resolvidaPor: ator.usuarioId ?? null, resolvidaEm: new Date() })
+        .set({
+          status: d.status,
+          resolucao: d.resolucao,
+          resolvidaPor: ator.usuarioId ?? null,
+          resolvidaEm: new Date(),
+        })
         .where(eq(denuncias.id, id))
         .returning();
       if (!r.length) throw naoEncontrado('denuncia');
-      await auditar(tx, { ator, entidadeTipo: 'denuncia', entidadeId: id, acao: `denuncia.${d.status}`, motivo: d.resolucao });
+      await auditar(tx, {
+        ator,
+        entidadeTipo: 'denuncia',
+        entidadeId: id,
+        acao: `denuncia.${d.status}`,
+        motivo: d.resolucao,
+      });
     });
   }
 
@@ -103,7 +122,11 @@ export class ModeracaoService {
   async decidirDisputa(
     ator: Ator,
     id: string,
-    d: { decisao: 'estorno_total' | 'estorno_parcial' | 'negada'; valorEstornoCentavos?: number; resolucao: string },
+    d: {
+      decisao: 'estorno_total' | 'estorno_parcial' | 'negada';
+      valorEstornoCentavos?: number;
+      resolucao: string;
+    },
   ) {
     await this.banco.comAtor(ator, (tx) => decidirDisputa(tx, { disputaId: id, ator, ...d }));
   }
@@ -111,7 +134,11 @@ export class ModeracaoService {
   async buscarUsuarios(termo?: string) {
     const t = termo?.trim();
     const filtro = t
-      ? or(ilike(usuarios.nome, `%${t}%`), ilike(usuarios.email, `%${t}%`), eq(usuarios.cpf, t.replace(/\D/g, '') || '-'))
+      ? or(
+          ilike(usuarios.nome, `%${t}%`),
+          ilike(usuarios.email, `%${t}%`),
+          eq(usuarios.cpf, t.replace(/\D/g, '') || '-'),
+        )
       : undefined;
     return this.banco.db
       .select({
@@ -139,8 +166,14 @@ export class ModeracaoService {
       const novo = bloquear ? 'bloqueado' : 'ativo';
       await tx.update(usuarios).set({ status: novo }).where(eq(usuarios.id, usuarioId));
       if (bloquear) {
-        await tx.update(sessoes).set({ revogadaEm: new Date() }).where(eq(sessoes.usuarioId, usuarioId));
-        await tx.update(instrutores).set({ disponivel: false }).where(eq(instrutores.usuarioId, usuarioId));
+        await tx
+          .update(sessoes)
+          .set({ revogadaEm: new Date() })
+          .where(eq(sessoes.usuarioId, usuarioId));
+        await tx
+          .update(instrutores)
+          .set({ disponivel: false })
+          .where(eq(instrutores.usuarioId, usuarioId));
       }
       await auditar(tx, {
         ator,
@@ -174,7 +207,13 @@ export class ModeracaoService {
         .select({ total: sql<string>`coalesce(sum(${lancamentos.valorCentavos}), 0)` })
         .from(lancamentos)
         .innerJoin(contasFinanceiras, eq(contasFinanceiras.id, lancamentos.contaId))
-        .where(and(eq(contasFinanceiras.titularTipo, 'plataforma'), eq(lancamentos.tipo, 'comissao'), sql`${lancamentos.criadoEm} >= ${inicioMes}`));
+        .where(
+          and(
+            eq(contasFinanceiras.titularTipo, 'plataforma'),
+            eq(lancamentos.tipo, 'comissao'),
+            sql`${lancamentos.criadoEm} >= ${inicioMes}`,
+          ),
+        );
       const [u] = await tx
         .select({
           ativos30d: sql<number>`count(*) filter (where ${usuarios.ultimoAcessoEm} > now() - interval '30 days')::int`,
@@ -190,7 +229,11 @@ export class ModeracaoService {
         })
         .from(sql`(select 1) x`);
       const cidades = await tx
-        .select({ municipio: autoescolas.municipio, uf: autoescolas.uf, autoescolas: sql<number>`count(*)::int` })
+        .select({
+          municipio: autoescolas.municipio,
+          uf: autoescolas.uf,
+          autoescolas: sql<number>`count(*)::int`,
+        })
         .from(autoescolas)
         .where(eq(autoescolas.status, 'aprovada'))
         .groupBy(autoescolas.municipio, autoescolas.uf)
@@ -202,7 +245,9 @@ export class ModeracaoService {
           total: sql<number>`count(*)::int`,
         })
         .from(aulas)
-        .where(and(eq(aulas.status, 'concluida'), sql`${aulas.inicio} > now() - interval '30 days'`))
+        .where(
+          and(eq(aulas.status, 'concluida'), sql`${aulas.inicio} > now() - interval '30 days'`),
+        )
         .groupBy(sql`1`)
         .orderBy(sql`1`);
       const [abertas] = await tx

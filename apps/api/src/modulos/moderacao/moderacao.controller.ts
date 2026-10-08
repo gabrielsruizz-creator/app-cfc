@@ -1,7 +1,19 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
-import { abrirDenuncia, abrirDisputa, decidirDisputa, reprovarComMotivo, resolverDenuncia } from '@volante/contracts';
+import {
+  abrirDenuncia,
+  abrirDisputa,
+  decidirDisputa,
+  reprovarComMotivo,
+  resolverDenuncia,
+} from '@volante/contracts';
 import { z } from 'zod';
-import { atorAdmin, atorAluno, atorInstrutor, SessaoAtual, type Sessao } from '../../nucleo/auth/sessao';
+import {
+  atorAdmin,
+  atorAluno,
+  atorInstrutor,
+  SessaoAtual,
+  type Sessao,
+} from '../../nucleo/auth/sessao';
 import { ZodPipe } from '../../nucleo/zod.pipe';
 import { ModeracaoService } from './moderacao.service';
 
@@ -15,18 +27,27 @@ export class ModeracaoController {
   @Post('denuncias')
   denunciar(
     @SessaoAtual() s: Sessao,
-    @Body(new ZodPipe(abrirDenuncia)) d: { alvoTipo: string; alvoId: string; aulaId?: string; motivo: string; descricao?: string },
+    @Body(new ZodPipe(abrirDenuncia))
+    d: { alvoTipo: string; alvoId: string; aulaId?: string; motivo: string; descricao?: string },
   ) {
     return this.servico.denunciar(s, d);
   }
 
   @Post('aluno/aulas/:id/disputa')
-  disputaAluno(@SessaoAtual() s: Sessao, @Param('id', ParseUUIDPipe) id: string, @Body(new ZodPipe(disputaDaAula)) d: Disputa) {
+  disputaAluno(
+    @SessaoAtual() s: Sessao,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodPipe(disputaDaAula)) d: Disputa,
+  ) {
     return this.servico.abrirDisputa(atorAluno(s), 'aluno', { aulaId: id, ...d });
   }
 
   @Post('instrutor/aulas/:id/disputa')
-  disputaInstrutor(@SessaoAtual() s: Sessao, @Param('id', ParseUUIDPipe) id: string, @Body(new ZodPipe(disputaDaAula)) d: Disputa) {
+  disputaInstrutor(
+    @SessaoAtual() s: Sessao,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodPipe(disputaDaAula)) d: Disputa,
+  ) {
     return this.servico.abrirDisputa(atorInstrutor(s), 'instrutor', { aulaId: id, ...d });
   }
 
@@ -47,7 +68,8 @@ export class ModeracaoController {
   async resolver(
     @SessaoAtual() s: Sessao,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body(new ZodPipe(resolverDenuncia)) d: { status: 'resolvida' | 'descartada'; resolucao: string },
+    @Body(new ZodPipe(resolverDenuncia))
+    d: { status: 'resolvida' | 'descartada'; resolucao: string },
   ) {
     await this.servico.resolverDenuncia(atorAdmin(s), id, d);
   }
@@ -63,7 +85,11 @@ export class ModeracaoController {
     @SessaoAtual() s: Sessao,
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodPipe(decidirDisputa))
-    d: { decisao: 'estorno_total' | 'estorno_parcial' | 'negada'; valorEstornoCentavos?: number; resolucao: string },
+    d: {
+      decisao: 'estorno_total' | 'estorno_parcial' | 'negada';
+      valorEstornoCentavos?: number;
+      resolucao: string;
+    },
   ) {
     await this.servico.decidirDisputa(atorAdmin(s), id, d);
   }
@@ -79,7 +105,8 @@ export class ModeracaoController {
   async statusUsuario(
     @SessaoAtual() s: Sessao,
     @Param('id', ParseUUIDPipe) id: string,
-    @Param('acao', new ZodPipe(z.enum(['bloquear', 'desbloquear']))) acao: 'bloquear' | 'desbloquear',
+    @Param('acao', new ZodPipe(z.enum(['bloquear', 'desbloquear'])))
+    acao: 'bloquear' | 'desbloquear',
     @Body(new ZodPipe(reprovarComMotivo)) d: { motivo: string },
   ) {
     await this.servico.alterarStatusUsuario(atorAdmin(s), id, acao === 'bloquear', d.motivo);

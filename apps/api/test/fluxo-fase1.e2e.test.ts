@@ -1,6 +1,5 @@
 import {
   ATOR_SISTEMA,
-  adminsPlataforma,
   aulas,
   cobrancas,
   comAtor,
@@ -11,7 +10,16 @@ import {
 import { confirmarPagamento } from '@volante/dominio';
 import { DateTime } from 'luxon';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { auth, cadastrar, enviarArquivo, iniciarApp, type Contexto } from './apoio';
+import {
+  alunoCompleto,
+  auth,
+  BASE,
+  cadastrar,
+  criarAdmin,
+  iniciarApp,
+  instrutorAprovado,
+  type Contexto,
+} from './apoio';
 
 let ctx: Contexto;
 beforeAll(async () => {
@@ -21,124 +29,6 @@ afterAll(async () => {
   await ctx?.app.close();
   await ctx?.banco.destruir();
 });
-
-const BASE = { lat: -23.5614, lng: -46.6559 };
-
-async function criarAdmin() {
-  const admin = await cadastrar(ctx, 'Admin');
-  await ctx.banco.db.insert(adminsPlataforma).values({ usuarioId: admin.eu.id });
-  return admin;
-}
-
-/** Cadastro completo de instrutor pelo app + aprovação pelo admin. */
-async function instrutorAprovado(adminToken: string) {
-  const u = await cadastrar(ctx, 'Instrutor');
-  const h = auth(u.token);
-  const foto = await enviarArquivo(ctx, u.token, 'foto_perfil');
-  await ctx
-    .http()
-    .post('/instrutor/perfil')
-    .set(h)
-    .send({
-      bio: 'Instrutor com 10 anos de experiência em direção defensiva.',
-      atuaDesde: 2014,
-      categorias: ['B'],
-      fotoArquivoId: foto,
-    })
-    .expect(201);
-  await ctx
-    .http()
-    .put('/instrutor/atendimento')
-    .set(h)
-    .send({
-      precoAulaCentavos: 10000,
-      duracaoAulaMin: 50,
-      raioAtendimentoKm: 10,
-      baseLocalizacao: BASE,
-      forneceVeiculo: true,
-      aceitaVeiculoAluno: false,
-    })
-    .expect(200);
-  for (const tipo of [
-    'cnh',
-    'credencial_detran',
-    'documento_veiculo',
-    'comprovante_residencia',
-    'selfie',
-  ]) {
-    const arquivoId = await enviarArquivo(ctx, u.token, tipo === 'selfie' ? 'selfie' : 'documento');
-    await ctx
-      .http()
-      .post('/instrutor/documentos')
-      .set(h)
-      .send({
-        tipo,
-        arquivoId,
-        validade: tipo === 'selfie' || tipo === 'comprovante_residencia' ? undefined : '2031-01-01',
-      })
-      .expect(201);
-  }
-  await ctx
-    .http()
-    .post('/instrutor/veiculos')
-    .set(h)
-    .send({
-      placa: `ABC1D${Math.floor(10 + Math.random() * 89)}`,
-      marca: 'Fiat',
-      modelo: 'Argo',
-      ano: 2022,
-      cambio: 'manual',
-      adaptadoPcd: false,
-      categoria: 'B',
-    })
-    .expect(201);
-  await ctx
-    .http()
-    .put('/instrutor/jornada')
-    .set(h)
-    .send({
-      faixas: [0, 1, 2, 3, 4, 5, 6].map((d) => ({
-        diaSemana: d,
-        horaInicio: '06:00',
-        horaFim: '22:00',
-      })),
-    })
-    .expect(200);
-
-  // Disponível antes da aprovação é recusado
-  await ctx.http().put('/instrutor/disponibilidade').set(h).send({ disponivel: true }).expect(422);
-
-  const enviado = await ctx.http().post('/instrutor/enviar-analise').set(h).expect(201);
-  expect(enviado.body.status).toBe('em_analise');
-  const instrutorId = enviado.body.id as string;
-
-  const ha = auth(adminToken);
-  // Aprovar sem aprovar documentos é bloqueado
-  await ctx.http().post(`/admin/instrutores/${instrutorId}/aprovar`).set(ha).expect(422);
-  const det = await ctx.http().get(`/admin/instrutores/${instrutorId}`).set(ha).expect(200);
-  for (const d of det.body.documentos) {
-    await ctx
-      .http()
-      .post(`/admin/instrutores/${instrutorId}/documentos/${d.id}/aprovar`)
-      .set(ha)
-      .expect(201);
-  }
-  await ctx.http().post(`/admin/instrutores/${instrutorId}/aprovar`).set(ha).expect(201);
-  await ctx.http().put('/instrutor/disponibilidade').set(h).send({ disponivel: true }).expect(200);
-  return { ...u, instrutorId };
-}
-
-async function alunoCompleto() {
-  const u = await cadastrar(ctx, 'Aluno');
-  const selfie = await enviarArquivo(ctx, u.token, 'selfie');
-  const r = await ctx
-    .http()
-    .post('/aluno/perfil')
-    .set(auth(u.token))
-    .send({ categoriaDesejada: 'B', selfieArquivoId: selfie })
-    .expect(201);
-  return { ...u, alunoId: r.body.id as string };
-}
 
 function proximoHorario(dias: number, hora: number) {
   return DateTime.now()
@@ -154,8 +44,8 @@ describe('Fase 1 — fluxo completo pela API', () => {
   let instrutor: Awaited<ReturnType<typeof instrutorAprovado>>;
 
   beforeAll(async () => {
-    admin = await criarAdmin();
-    instrutor = await instrutorAprovado(admin.token);
+    admin = await criarAdmin(ctx);
+    instrutor = await instrutorAprovado(ctx, admin.token);
   });
 
   it('login por e-mail ou CPF, renovação de sessão e reuso de refresh token bloqueado', async () => {
@@ -208,7 +98,7 @@ describe('Fase 1 — fluxo completo pela API', () => {
   });
 
   it('agenda, paga, aceita, faz check-in/out, confirma e avalia', async () => {
-    const aluno = await alunoCompleto();
+    const aluno = await alunoCompleto(ctx);
     const ha = auth(aluno.token);
     const hi = auth(instrutor.token);
     const inicio = proximoHorario(3, 10);
@@ -251,7 +141,7 @@ describe('Fase 1 — fluxo completo pela API', () => {
     expect(criada.body.codigoCheckin).toMatch(/^\d{4}$/);
 
     // outro aluno não consegue o mesmo horário
-    const outro = await alunoCompleto();
+    const outro = await alunoCompleto(ctx);
     await ctx
       .http()
       .post('/aluno/aulas')
@@ -362,7 +252,7 @@ describe('Fase 1 — fluxo completo pela API', () => {
   });
 
   it('cancelamento grátis antes do prazo e prévia da regra', async () => {
-    const aluno = await alunoCompleto();
+    const aluno = await alunoCompleto(ctx);
     const ha = auth(aluno.token);
     const criada = await ctx
       .http()

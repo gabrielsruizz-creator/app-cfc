@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { criarBancoTeste, semearBase, type BancoTeste } from '@volante/db';
+import { adminsPlataforma, criarBancoTeste, semearBase, type BancoTeste } from '@volante/db';
+import { expect } from 'vitest';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -88,3 +89,121 @@ export async function enviarArquivo(ctx: Contexto, token: string, finalidade: st
 }
 
 export const auth = (token: string) => ({ authorization: `Bearer ${token}` });
+
+export const BASE = { lat: -23.5614, lng: -46.6559 };
+
+export async function criarAdmin(ctx: Contexto) {
+  const admin = await cadastrar(ctx, 'Admin');
+  await ctx.banco.db.insert(adminsPlataforma).values({ usuarioId: admin.eu.id });
+  return admin;
+}
+
+/** Cadastro completo de instrutor pelo app + aprovação pelo admin. */
+export async function instrutorAprovado(ctx: Contexto, adminToken: string) {
+  const u = await cadastrar(ctx, 'Instrutor');
+  const h = auth(u.token);
+  const foto = await enviarArquivo(ctx, u.token, 'foto_perfil');
+  await ctx
+    .http()
+    .post('/instrutor/perfil')
+    .set(h)
+    .send({
+      bio: 'Instrutor com 10 anos de experiência em direção defensiva.',
+      atuaDesde: 2014,
+      categorias: ['B'],
+      fotoArquivoId: foto,
+    })
+    .expect(201);
+  await ctx
+    .http()
+    .put('/instrutor/atendimento')
+    .set(h)
+    .send({
+      precoAulaCentavos: 10000,
+      duracaoAulaMin: 50,
+      raioAtendimentoKm: 10,
+      baseLocalizacao: BASE,
+      forneceVeiculo: true,
+      aceitaVeiculoAluno: false,
+    })
+    .expect(200);
+  for (const tipo of [
+    'cnh',
+    'credencial_detran',
+    'documento_veiculo',
+    'comprovante_residencia',
+    'selfie',
+  ]) {
+    const arquivoId = await enviarArquivo(ctx, u.token, tipo === 'selfie' ? 'selfie' : 'documento');
+    await ctx
+      .http()
+      .post('/instrutor/documentos')
+      .set(h)
+      .send({
+        tipo,
+        arquivoId,
+        validade: tipo === 'selfie' || tipo === 'comprovante_residencia' ? undefined : '2031-01-01',
+      })
+      .expect(201);
+  }
+  await ctx
+    .http()
+    .post('/instrutor/veiculos')
+    .set(h)
+    .send({
+      placa: `ABC1D${Math.floor(10 + Math.random() * 89)}`,
+      marca: 'Fiat',
+      modelo: 'Argo',
+      ano: 2022,
+      cambio: 'manual',
+      adaptadoPcd: false,
+      categoria: 'B',
+    })
+    .expect(201);
+  await ctx
+    .http()
+    .put('/instrutor/jornada')
+    .set(h)
+    .send({
+      faixas: [0, 1, 2, 3, 4, 5, 6].map((d) => ({
+        diaSemana: d,
+        horaInicio: '06:00',
+        horaFim: '22:00',
+      })),
+    })
+    .expect(200);
+
+  // Disponível antes da aprovação é recusado
+  await ctx.http().put('/instrutor/disponibilidade').set(h).send({ disponivel: true }).expect(422);
+
+  const enviado = await ctx.http().post('/instrutor/enviar-analise').set(h).expect(201);
+  expect(enviado.body.status).toBe('em_analise');
+  const instrutorId = enviado.body.id as string;
+
+  const ha = auth(adminToken);
+  // Aprovar sem aprovar documentos é bloqueado
+  await ctx.http().post(`/admin/instrutores/${instrutorId}/aprovar`).set(ha).expect(422);
+  const det = await ctx.http().get(`/admin/instrutores/${instrutorId}`).set(ha).expect(200);
+  for (const d of det.body.documentos) {
+    await ctx
+      .http()
+      .post(`/admin/instrutores/${instrutorId}/documentos/${d.id}/aprovar`)
+      .set(ha)
+      .expect(201);
+  }
+  await ctx.http().post(`/admin/instrutores/${instrutorId}/aprovar`).set(ha).expect(201);
+  await ctx.http().put('/instrutor/disponibilidade').set(h).send({ disponivel: true }).expect(200);
+  return { ...u, instrutorId };
+}
+
+export async function alunoCompleto(ctx: Contexto) {
+  const u = await cadastrar(ctx, 'Aluno');
+  const selfie = await enviarArquivo(ctx, u.token, 'selfie');
+  const r = await ctx
+    .http()
+    .post('/aluno/perfil')
+    .set(auth(u.token))
+    .send({ categoriaDesejada: 'B', selfieArquivoId: selfie })
+    .expect(201);
+  return { ...u, alunoId: r.body.id as string };
+}

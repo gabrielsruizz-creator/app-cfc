@@ -2,7 +2,13 @@ import { Body, Controller, Get, Headers, Param, ParseUUIDPipe, Post, Query } fro
 import { enviarMensagem, iniciarConversa } from '@volante/contracts';
 import type { Ator } from '@volante/db';
 import { ErroDominio } from '@volante/dominio';
-import { atorAluno, atorAutoescola, atorInstrutor, SessaoAtual, type Sessao } from '../../nucleo/auth/sessao';
+import {
+  atorAluno,
+  atorAutoescola,
+  atorInstrutor,
+  SessaoAtual,
+  type Sessao,
+} from '../../nucleo/auth/sessao';
 import { ZodPipe } from '../../nucleo/zod.pipe';
 import { ChatService } from './chat.service';
 
@@ -19,14 +25,19 @@ export class ChatController {
   constructor(private readonly servico: ChatService) {}
 
   @Get()
-  listar(@SessaoAtual() s: Sessao, @Query('como') como?: string, @Headers('x-autoescola-id') a?: string) {
+  listar(
+    @SessaoAtual() s: Sessao,
+    @Query('como') como?: string,
+    @Headers('x-autoescola-id') a?: string,
+  ) {
     return this.servico.listar(ator(s, como, a));
   }
 
   @Post()
   async iniciar(
     @SessaoAtual() s: Sessao,
-    @Body(new ZodPipe(iniciarConversa)) d: { instrutorId?: string; autoescolaId?: string; alunoId?: string },
+    @Body(new ZodPipe(iniciarConversa))
+    d: { instrutorId?: string; autoescolaId?: string; alunoId?: string },
     @Query('como') como?: string,
     @Headers('x-autoescola-id') a?: string,
   ) {
@@ -34,7 +45,12 @@ export class ChatController {
   }
 
   @Get(':id/mensagens')
-  mensagens(@SessaoAtual() s: Sessao, @Param('id', ParseUUIDPipe) id: string, @Query('como') como?: string, @Headers('x-autoescola-id') a?: string) {
+  mensagens(
+    @SessaoAtual() s: Sessao,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('como') como?: string,
+    @Headers('x-autoescola-id') a?: string,
+  ) {
     return this.servico.mensagens(ator(s, como, a), id);
   }
 

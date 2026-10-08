@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Headers, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import {
   buscaAutoescolas,
   convidarInstrutor,
@@ -10,7 +21,13 @@ import {
 import { and, eq, inArray, instrutorVinculos, autoescolas } from '@volante/db';
 import { naoEncontrado } from '@volante/dominio';
 import { z } from 'zod';
-import { atorAutoescola, atorInstrutor, Publico, SessaoAtual, type Sessao } from '../../nucleo/auth/sessao';
+import {
+  atorAutoescola,
+  atorInstrutor,
+  Publico,
+  SessaoAtual,
+  type Sessao,
+} from '../../nucleo/auth/sessao';
 import { BancoService } from '../../nucleo/banco.service';
 import { ZodPipe } from '../../nucleo/zod.pipe';
 import { AulasConsultaService } from '../aulas/aulas-consulta.service';
@@ -32,18 +49,30 @@ export class PainelAutoescolaController {
   }
 
   @Get('autoescola/fila')
-  fila(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a?: string, @Query('status') status?: string) {
+  fila(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a?: string,
+    @Query('status') status?: string,
+  ) {
     return this.servico.fila(atorAutoescola(s, a), status);
   }
 
   @Post('autoescola/fila/:id/em-contato')
-  async emContato(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
+  async emContato(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.servico.atualizarPedido(atorAutoescola(s, a), id, 'em_contato');
     return { ok: true };
   }
 
   @Post('autoescola/fila/:id/confirmar')
-  async confirmar(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
+  async confirmar(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.servico.atualizarPedido(atorAutoescola(s, a), id, 'confirmar');
     return { ok: true };
   }
@@ -65,7 +94,12 @@ export class PainelAutoescolaController {
   }
 
   @Get('autoescola/aulas')
-  agenda(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a?: string, @Query('de') de?: string, @Query('ate') ate?: string) {
+  agenda(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a?: string,
+    @Query('de') de?: string,
+    @Query('ate') ate?: string,
+  ) {
     return this.aulas.listar(atorAutoescola(s, a), {
       de: de ? new Date(de) : new Date(Date.now() - 86400_000),
       ate: ate ? new Date(ate) : new Date(Date.now() + 21 * 86400_000),
@@ -80,12 +114,20 @@ export class PainelAutoescolaController {
   }
 
   @Post('autoescola/instrutores/convites')
-  convidar(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Body(new ZodPipe(convidarInstrutor)) d: { cpfOuEmail: string }) {
+  convidar(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Body(new ZodPipe(convidarInstrutor)) d: { cpfOuEmail: string },
+  ) {
     return this.servico.convidarInstrutor(atorAutoescola(s, a), d.cpfOuEmail);
   }
 
   @Delete('autoescola/instrutores/:vinculoId')
-  encerrar(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Param('vinculoId', ParseUUIDPipe) id: string) {
+  encerrar(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Param('vinculoId', ParseUUIDPipe) id: string,
+  ) {
     return this.servico.encerrarVinculo(atorAutoescola(s, a), id);
   }
 
@@ -95,17 +137,29 @@ export class PainelAutoescolaController {
   }
 
   @Put('autoescola/vitrine')
-  salvarVitrine(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Body(new ZodPipe(vitrineEntrada)) d: VitrineEntrada) {
+  salvarVitrine(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Body(new ZodPipe(vitrineEntrada)) d: VitrineEntrada,
+  ) {
     return this.servico.salvarVitrine(atorAutoescola(s, a), d);
   }
 
   @Post('autoescola/fotos')
-  adicionarFoto(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Body(new ZodPipe(novaFoto)) d: { arquivoId: string; legenda?: string }) {
+  adicionarFoto(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Body(new ZodPipe(novaFoto)) d: { arquivoId: string; legenda?: string },
+  ) {
     return this.servico.adicionarFoto(atorAutoescola(s, a), d.arquivoId, d.legenda);
   }
 
   @Delete('autoescola/fotos/:id')
-  removerFoto(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
+  removerFoto(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.servico.removerFoto(atorAutoescola(s, a), id);
   }
 
@@ -145,7 +199,11 @@ export class PainelAutoescolaController {
   }
 
   @Post('instrutor/vinculos/:id/:acao')
-  async responderVinculo(@SessaoAtual() s: Sessao, @Param('id', ParseUUIDPipe) id: string, @Param('acao') acao: string) {
+  async responderVinculo(
+    @SessaoAtual() s: Sessao,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('acao') acao: string,
+  ) {
     const ator = atorInstrutor(s);
     const mapa: Record<string, { de: string[]; para: string }> = {
       aceitar: { de: ['convidado'], para: 'ativo' },
@@ -161,7 +219,13 @@ export class PainelAutoescolaController {
           status: regra.para,
           ...(regra.para === 'ativo' ? { inicioEm: new Date() } : { fimEm: new Date() }),
         })
-        .where(and(eq(instrutorVinculos.id, id), eq(instrutorVinculos.instrutorId, ator.instrutorId), inArray(instrutorVinculos.status, regra.de)))
+        .where(
+          and(
+            eq(instrutorVinculos.id, id),
+            eq(instrutorVinculos.instrutorId, ator.instrutorId),
+            inArray(instrutorVinculos.status, regra.de),
+          ),
+        )
         .returning();
       if (!r.length) throw naoEncontrado('convite');
     });
@@ -172,7 +236,15 @@ export class PainelAutoescolaController {
 
   @Publico()
   @Get('publico/autoescolas')
-  buscar(@Query(new ZodPipe(buscaAutoescolas)) f: { lat: number; lng: number; raioKm: number; texto?: string }) {
+  buscar(
+    @Query(new ZodPipe(buscaAutoescolas))
+    f: {
+      lat: number;
+      lng: number;
+      raioKm: number;
+      texto?: string;
+    },
+  ) {
     return this.servico.buscarPublico(f);
   }
 

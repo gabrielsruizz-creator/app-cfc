@@ -25,7 +25,8 @@ import { BancoService } from '../../nucleo/banco.service';
 
 type Papel = 'aluno' | 'instrutor' | 'autoescola';
 
-const papelDo = (ator: Ator): Papel => (ator.tipo === 'aluno' ? 'aluno' : ator.tipo === 'instrutor' ? 'instrutor' : 'autoescola');
+const papelDo = (ator: Ator): Papel =>
+  ator.tipo === 'aluno' ? 'aluno' : ator.tipo === 'instrutor' ? 'instrutor' : 'autoescola';
 
 /** Chat entre aluno e instrutor/autoescola. Os telefones nunca são compartilhados por aqui. */
 @Injectable()
@@ -33,19 +34,40 @@ export class ChatService {
   constructor(private readonly banco: BancoService) {}
 
   /** Abre (ou reaproveita) a conversa. Instrutor/autoescola só falam com alunos que já atenderam ou venderam. */
-  async iniciar(ator: Ator, alvo: { instrutorId?: string; autoescolaId?: string; alunoId?: string }) {
+  async iniciar(
+    ator: Ator,
+    alvo: { instrutorId?: string; autoescolaId?: string; alunoId?: string },
+  ) {
     return this.banco.comAtor(ator, async (tx) => {
       let chave: { alunoId: string; instrutorId: string | null; autoescolaId: string | null };
       if (ator.tipo === 'aluno') {
-        if (!alvo.instrutorId && !alvo.autoescolaId) throw new ErroDominio('alvo_invalido', 'Escolha com quem conversar', 'validacao');
-        chave = { alunoId: ator.alunoId!, instrutorId: alvo.instrutorId ?? null, autoescolaId: alvo.autoescolaId ?? null };
+        if (!alvo.instrutorId && !alvo.autoescolaId)
+          throw new ErroDominio('alvo_invalido', 'Escolha com quem conversar', 'validacao');
+        chave = {
+          alunoId: ator.alunoId!,
+          instrutorId: alvo.instrutorId ?? null,
+          autoescolaId: alvo.autoescolaId ?? null,
+        };
       } else {
         if (!alvo.alunoId) throw new ErroDominio('alvo_invalido', 'Escolha o aluno', 'validacao');
         const relacao =
           ator.tipo === 'instrutor'
-            ? await tx.select({ id: aulas.id }).from(aulas).where(eq(aulas.alunoId, alvo.alunoId)).limit(1)
-            : await tx.select({ id: pedidos.id }).from(pedidos).where(eq(pedidos.alunoId, alvo.alunoId)).limit(1);
-        if (!relacao.length) throw new ErroDominio('sem_relacao', 'Você só pode conversar com seus alunos', 'proibido');
+            ? await tx
+                .select({ id: aulas.id })
+                .from(aulas)
+                .where(eq(aulas.alunoId, alvo.alunoId))
+                .limit(1)
+            : await tx
+                .select({ id: pedidos.id })
+                .from(pedidos)
+                .where(eq(pedidos.alunoId, alvo.alunoId))
+                .limit(1);
+        if (!relacao.length)
+          throw new ErroDominio(
+            'sem_relacao',
+            'Você só pode conversar com seus alunos',
+            'proibido',
+          );
         chave = {
           alunoId: alvo.alunoId,
           instrutorId: ator.tipo === 'instrutor' ? ator.instrutorId! : null,
@@ -55,10 +77,16 @@ export class ChatService {
       const tipo = chave.instrutorId ? 'aluno_instrutor' : 'aluno_autoescola';
       const filtro = chave.instrutorId
         ? and(eq(conversas.alunoId, chave.alunoId), eq(conversas.instrutorId, chave.instrutorId))
-        : and(eq(conversas.alunoId, chave.alunoId), eq(conversas.autoescolaId, chave.autoescolaId!));
+        : and(
+            eq(conversas.alunoId, chave.alunoId),
+            eq(conversas.autoescolaId, chave.autoescolaId!),
+          );
       const [existente] = await tx.select().from(conversas).where(filtro);
       if (existente) return existente.id;
-      const [nova] = await tx.insert(conversas).values({ tipo, ...chave }).returning();
+      const [nova] = await tx
+        .insert(conversas)
+        .values({ tipo, ...chave })
+        .returning();
       return nova!.id;
     });
   }
@@ -75,7 +103,9 @@ export class ChatService {
           instrutorFoto: sql<string | null>`ui.foto_arquivo_id`,
           autoescolaNome: autoescolas.nomeFantasia,
           autoescolaLogo: autoescolas.logoArquivoId,
-          ultima: sql<string | null>`(select m.texto from mensagens m where m.conversa_id = ${conversas.id} order by m.criado_em desc limit 1)`,
+          ultima: sql<
+            string | null
+          >`(select m.texto from mensagens m where m.conversa_id = ${conversas.id} order by m.criado_em desc limit 1)`,
           naoLidas: sql<number>`(select count(*)::int from mensagens m where m.conversa_id = ${conversas.id} and m.lida_em is null and m.autor_papel <> ${papel})`,
         })
         .from(conversas)
@@ -90,8 +120,16 @@ export class ChatService {
         const outra =
           papel === 'aluno'
             ? l.c.instrutorId
-              ? { nome: l.instrutorNome ?? 'Instrutor', fotoArquivoId: l.instrutorFoto, papel: 'instrutor' }
-              : { nome: l.autoescolaNome ?? 'Autoescola', fotoArquivoId: l.autoescolaLogo, papel: 'autoescola' }
+              ? {
+                  nome: l.instrutorNome ?? 'Instrutor',
+                  fotoArquivoId: l.instrutorFoto,
+                  papel: 'instrutor',
+                }
+              : {
+                  nome: l.autoescolaNome ?? 'Autoescola',
+                  fotoArquivoId: l.autoescolaLogo,
+                  papel: 'autoescola',
+                }
             : { nome: l.alunoNome, fotoArquivoId: l.alunoFoto, papel: 'aluno' };
         return {
           id: l.c.id,
@@ -118,8 +156,19 @@ export class ChatService {
       await tx
         .update(mensagens)
         .set({ lidaEm: new Date() })
-        .where(and(eq(mensagens.conversaId, c.id), isNull(mensagens.lidaEm), ne(mensagens.autorPapel, papel)));
-      const linhas = await tx.select().from(mensagens).where(eq(mensagens.conversaId, c.id)).orderBy(asc(mensagens.criadoEm)).limit(500);
+        .where(
+          and(
+            eq(mensagens.conversaId, c.id),
+            isNull(mensagens.lidaEm),
+            ne(mensagens.autorPapel, papel),
+          ),
+        );
+      const linhas = await tx
+        .select()
+        .from(mensagens)
+        .where(eq(mensagens.conversaId, c.id))
+        .orderBy(asc(mensagens.criadoEm))
+        .limit(500);
       return linhas.map((m) => ({
         id: m.id,
         texto: m.texto,
@@ -147,21 +196,35 @@ export class ChatService {
           texto,
         })
         .returning();
-      await tx.update(conversas).set({ ultimaMensagemEm: new Date() }).where(eq(conversas.id, c.id));
+      await tx
+        .update(conversas)
+        .set({ ultimaMensagemEm: new Date() })
+        .where(eq(conversas.id, c.id));
       // Destinatários (usuários) para o aviso: o aluno, o instrutor ou os membros da autoescola.
       await this.banco.elevarParaSistema(tx);
       const destinatarios: string[] = [];
       if (papel !== 'aluno') {
-        const [a] = await tx.select({ u: alunos.usuarioId }).from(alunos).where(eq(alunos.id, c.alunoId));
+        const [a] = await tx
+          .select({ u: alunos.usuarioId })
+          .from(alunos)
+          .where(eq(alunos.id, c.alunoId));
         if (a) destinatarios.push(a.u);
       } else if (c.instrutorId) {
-        const [i] = await tx.select({ u: instrutores.usuarioId }).from(instrutores).where(eq(instrutores.id, c.instrutorId));
+        const [i] = await tx
+          .select({ u: instrutores.usuarioId })
+          .from(instrutores)
+          .where(eq(instrutores.id, c.instrutorId));
         if (i) destinatarios.push(i.u);
       } else if (c.autoescolaId) {
         const ms = await tx
           .select({ u: autoescolaMembros.usuarioId })
           .from(autoescolaMembros)
-          .where(and(eq(autoescolaMembros.autoescolaId, c.autoescolaId), eq(autoescolaMembros.status, 'ativo')));
+          .where(
+            and(
+              eq(autoescolaMembros.autoescolaId, c.autoescolaId),
+              eq(autoescolaMembros.status, 'ativo'),
+            ),
+          );
         destinatarios.push(...ms.map((x) => x.u));
       }
       await publicarEvento(tx, {

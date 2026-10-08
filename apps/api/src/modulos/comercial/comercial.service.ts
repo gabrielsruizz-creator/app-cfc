@@ -82,7 +82,9 @@ export class ComercialService {
 
   async meusPacotes(ator: Ator): Promise<Pacote[]> {
     return this.banco.comAtor(ator, async (tx) => {
-      const filtro = ator.instrutorId ? eq(pacotes.instrutorId, ator.instrutorId) : eq(pacotes.autoescolaId, ator.autoescolaId!);
+      const filtro = ator.instrutorId
+        ? eq(pacotes.instrutorId, ator.instrutorId)
+        : eq(pacotes.autoescolaId, ator.autoescolaId!);
       const linhas = await this.consultaPacotes(tx)
         .where(and(filtro, isNull(pacotes.arquivadoEm)))
         .orderBy(asc(pacotes.precoCentavos));
@@ -104,7 +106,11 @@ export class ComercialService {
         publicado: d.publicado,
       };
       if (pacoteId) {
-        const [antes] = await tx.select().from(pacotes).where(eq(pacotes.id, pacoteId)).for('update');
+        const [antes] = await tx
+          .select()
+          .from(pacotes)
+          .where(eq(pacotes.id, pacoteId))
+          .for('update');
         if (!antes) throw naoEncontrado('pacote');
         await tx.update(pacotes).set(valores).where(eq(pacotes.id, pacoteId));
         if (antes.precoCentavos !== d.precoCentavos) {
@@ -141,12 +147,17 @@ export class ComercialService {
     return this.meusPacotes(ator);
   }
 
-  async pacotesPublicos(filtro: { instrutorId?: string; autoescolaId?: string }): Promise<Pacote[]> {
+  async pacotesPublicos(filtro: {
+    instrutorId?: string;
+    autoescolaId?: string;
+  }): Promise<Pacote[]> {
     return this.banco.comAtor({ tipo: 'anonimo' }, async (tx) => {
       const linhas = await this.consultaPacotes(tx)
         .where(
           and(
-            filtro.instrutorId ? eq(pacotes.instrutorId, filtro.instrutorId) : eq(pacotes.autoescolaId, filtro.autoescolaId!),
+            filtro.instrutorId
+              ? eq(pacotes.instrutorId, filtro.instrutorId)
+              : eq(pacotes.autoescolaId, filtro.autoescolaId!),
             eq(pacotes.publicado, true),
             isNull(pacotes.arquivadoEm),
           ),
@@ -179,7 +190,12 @@ export class ComercialService {
 
   async pedidos(ator: Ator): Promise<ResumoPedido[]> {
     const ids = await this.banco.comAtor(ator, (tx) =>
-      tx.select({ id: pedidos.id }).from(pedidos).where(eq(pedidos.tipo, 'pacote')).orderBy(desc(pedidos.criadoEm)).limit(100),
+      tx
+        .select({ id: pedidos.id })
+        .from(pedidos)
+        .where(eq(pedidos.tipo, 'pacote'))
+        .orderBy(desc(pedidos.criadoEm))
+        .limit(100),
     );
     return Promise.all(ids.map((p) => this.pedido(ator, p.id)));
   }
@@ -200,7 +216,10 @@ export class ComercialService {
         .where(eq(pedidoHistorico.pedidoId, p.id))
         .orderBy(asc(pedidoHistorico.criadoEm));
       const [cr] = await tx.select().from(creditosAula).where(eq(creditosAula.pedidoId, p.id));
-      const [av] = await tx.select({ id: avaliacoes.id }).from(avaliacoes).where(eq(avaliacoes.pedidoId, p.id));
+      const [av] = await tx
+        .select({ id: avaliacoes.id })
+        .from(avaliacoes)
+        .where(eq(avaliacoes.pedidoId, p.id));
       return {
         id: p.id,
         codigo: p.codigo,
@@ -230,7 +249,11 @@ export class ComercialService {
               ambienteTeste: c.gateway === 'simulado',
             }
           : null,
-        historico: historico.map((h) => ({ paraStatus: h.paraStatus, motivo: h.motivo, criadoEm: h.criadoEm.toISOString() })),
+        historico: historico.map((h) => ({
+          paraStatus: h.paraStatus,
+          motivo: h.motivo,
+          criadoEm: h.criadoEm.toISOString(),
+        })),
         credito: cr
           ? {
               id: cr.id,
@@ -252,7 +275,9 @@ export class ComercialService {
         .select({ c: creditosAula, p: pedidos })
         .from(creditosAula)
         .innerJoin(pedidos, eq(pedidos.id, creditosAula.pedidoId))
-        .where(and(eq(pedidos.tipo, 'pacote'), sql`${creditosAula.status} in ('ativo', 'bloqueado')`))
+        .where(
+          and(eq(pedidos.tipo, 'pacote'), sql`${creditosAula.status} in ('ativo', 'bloqueado')`),
+        )
         .orderBy(desc(creditosAula.criadoEm));
       return linhas.map(({ c, p }) => ({
         id: c.id,
@@ -289,14 +314,25 @@ export class ComercialService {
   }
 
   /** Aluno avalia a autoescola depois que ela confirmou o pedido. */
-  async avaliarAutoescola(ator: Ator & { alunoId: string }, pedidoId: string, nota: number, comentario?: string) {
+  async avaliarAutoescola(
+    ator: Ator & { alunoId: string },
+    pedidoId: string,
+    nota: number,
+    comentario?: string,
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
       const [p] = await tx.select().from(pedidos).where(eq(pedidos.id, pedidoId));
       if (!p?.autoescolaId) throw naoEncontrado('pedido');
       if (p.statusAtendimento !== 'confirmado') {
-        throw new ErroDominio('pedido_nao_confirmado', 'Você poderá avaliar depois que a autoescola confirmar sua matrícula');
+        throw new ErroDominio(
+          'pedido_nao_confirmado',
+          'Você poderá avaliar depois que a autoescola confirmar sua matrícula',
+        );
       }
-      const [ja] = await tx.select({ id: avaliacoes.id }).from(avaliacoes).where(eq(avaliacoes.pedidoId, p.id));
+      const [ja] = await tx
+        .select({ id: avaliacoes.id })
+        .from(avaliacoes)
+        .where(eq(avaliacoes.pedidoId, p.id));
       if (ja) throw new ErroDominio('ja_avaliada', 'Você já avaliou esta autoescola', 'conflito');
       await tx.insert(avaliacoes).values({
         pedidoId: p.id,

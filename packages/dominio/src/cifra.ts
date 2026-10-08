@@ -10,14 +10,21 @@ function chave(): Buffer {
   if (!segredo && process.env.NODE_ENV === 'production') {
     throw new Error('Defina CHAVE_CIFRAGEM em produção');
   }
-  return createHash('sha256').update(segredo ?? 'volante-desenvolvimento-nao-usar-em-producao').digest();
+  return createHash('sha256')
+    .update(segredo ?? 'volante-desenvolvimento-nao-usar-em-producao')
+    .digest();
 }
 
 export function cifrar(texto: string): string {
   const iv = randomBytes(12);
   const c = createCipheriv('aes-256-gcm', chave(), iv);
   const dados = Buffer.concat([c.update(texto, 'utf8'), c.final()]);
-  return ['v1', iv.toString('base64'), c.getAuthTag().toString('base64'), dados.toString('base64')].join('.');
+  return [
+    'v1',
+    iv.toString('base64'),
+    c.getAuthTag().toString('base64'),
+    dados.toString('base64'),
+  ].join('.');
 }
 
 export function decifrar(cifrado: string): string {

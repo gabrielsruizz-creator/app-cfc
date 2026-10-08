@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import type { AutoescolaCard, ItemFila, PerfilAutoescolaPublico, VitrineEntrada } from '@volante/contracts';
+import type {
+  AutoescolaCard,
+  ItemFila,
+  PerfilAutoescolaPublico,
+  VitrineEntrada,
+} from '@volante/contracts';
 import {
   alunos,
   and,
@@ -102,15 +107,23 @@ export class PainelAutoescolaService {
     });
   }
 
-  async atualizarPedido(ator: Ator, pedidoId: string, acao: 'em_contato' | 'confirmar' | 'recusar', motivo?: string) {
+  async atualizarPedido(
+    ator: Ator,
+    pedidoId: string,
+    acao: 'em_contato' | 'confirmar' | 'recusar',
+    motivo?: string,
+  ) {
     await this.banco.comAtor(ator, async (tx) => {
       // Confere no contexto da autoescola (RLS) e eleva só para gravar o financeiro.
       const [p] = await tx.select({ id: pedidos.id }).from(pedidos).where(eq(pedidos.id, pedidoId));
       if (!p) throw naoEncontrado('pedido');
       await this.banco.elevarParaSistema(tx);
-      if (acao === 'em_contato') await marcarEmContato(tx, pedidoId, ator.autoescolaId!, ator.usuarioId!);
-      else if (acao === 'confirmar') await confirmarPedidoAutoescola(tx, pedidoId, ator.autoescolaId!, ator.usuarioId!);
-      else await recusarPedidoAutoescola(tx, pedidoId, ator.autoescolaId!, motivo!, ator.usuarioId!);
+      if (acao === 'em_contato')
+        await marcarEmContato(tx, pedidoId, ator.autoescolaId!, ator.usuarioId!);
+      else if (acao === 'confirmar')
+        await confirmarPedidoAutoescola(tx, pedidoId, ator.autoescolaId!, ator.usuarioId!);
+      else
+        await recusarPedidoAutoescola(tx, pedidoId, ator.autoescolaId!, motivo!, ator.usuarioId!);
     });
   }
 
@@ -124,7 +137,10 @@ export class PainelAutoescolaService {
         .innerJoin(alunos, eq(alunos.id, matriculas.alunoId))
         .innerJoin(usuarios, eq(usuarios.id, alunos.usuarioId))
         .orderBy(desc(matriculas.criadoEm));
-      const creditos = await tx.select().from(creditosAula).where(eq(creditosAula.autoescolaId, ator.autoescolaId!));
+      const creditos = await tx
+        .select()
+        .from(creditosAula)
+        .where(eq(creditosAula.autoescolaId, ator.autoescolaId!));
       return linhas.map(({ m, u, aluno }) => {
         const doAluno = creditos.filter((c) => c.alunoId === aluno.id && c.status === 'ativo');
         return {
@@ -163,7 +179,12 @@ export class PainelAutoescolaService {
         .from(instrutorVinculos)
         .innerJoin(instrutores, eq(instrutores.id, instrutorVinculos.instrutorId))
         .innerJoin(usuarios, eq(usuarios.id, instrutores.usuarioId))
-        .where(and(eq(instrutorVinculos.autoescolaId, ator.autoescolaId!), inArray(instrutorVinculos.status, ['convidado', 'ativo'])))
+        .where(
+          and(
+            eq(instrutorVinculos.autoescolaId, ator.autoescolaId!),
+            inArray(instrutorVinculos.status, ['convidado', 'ativo']),
+          ),
+        )
         .orderBy(usuarios.nome),
     );
   }
@@ -177,26 +198,52 @@ export class PainelAutoescolaService {
       .innerJoin(instrutores, eq(instrutores.usuarioId, usuarios.id))
       .where(termo.includes('@') ? eq(usuarios.email, termo) : eq(usuarios.cpf, cpf));
     if (!alvo) {
-      throw new ErroDominio('instrutor_nao_encontrado', 'Nenhum instrutor com esse CPF ou e-mail. Ele precisa se cadastrar no app primeiro.');
+      throw new ErroDominio(
+        'instrutor_nao_encontrado',
+        'Nenhum instrutor com esse CPF ou e-mail. Ele precisa se cadastrar no app primeiro.',
+      );
     }
     if (alvo.instrutor.status !== 'aprovado') {
-      throw new ErroDominio('instrutor_nao_aprovado', 'Este instrutor ainda não teve o cadastro aprovado');
+      throw new ErroDominio(
+        'instrutor_nao_aprovado',
+        'Este instrutor ainda não teve o cadastro aprovado',
+      );
     }
     await this.banco.comAtor(ator, async (tx) => {
-      const [a] = await tx.select({ status: autoescolas.status }).from(autoescolas).where(eq(autoescolas.id, ator.autoescolaId!));
-      if (a?.status !== 'aprovada') throw new ErroDominio('autoescola_nao_aprovada', 'Sua autoescola precisa estar aprovada para convidar instrutores');
+      const [a] = await tx
+        .select({ status: autoescolas.status })
+        .from(autoescolas)
+        .where(eq(autoescolas.id, ator.autoescolaId!));
+      if (a?.status !== 'aprovada')
+        throw new ErroDominio(
+          'autoescola_nao_aprovada',
+          'Sua autoescola precisa estar aprovada para convidar instrutores',
+        );
       const [v] = await tx
         .insert(instrutorVinculos)
-        .values({ instrutorId: alvo.instrutor.id, autoescolaId: ator.autoescolaId!, convidadoPor: ator.usuarioId ?? null })
+        .values({
+          instrutorId: alvo.instrutor.id,
+          autoescolaId: ator.autoescolaId!,
+          convidadoPor: ator.usuarioId ?? null,
+        })
         .onConflictDoNothing()
         .returning();
-      if (!v) throw new ErroDominio('convite_existente', 'Este instrutor já foi convidado ou já está vinculado', 'conflito');
+      if (!v)
+        throw new ErroDominio(
+          'convite_existente',
+          'Este instrutor já foi convidado ou já está vinculado',
+          'conflito',
+        );
       await publicarEvento(tx, {
         tipo: 'instrutor.convidado',
         agregadoTipo: 'vinculo',
         agregadoId: v.id,
         autoescolaId: ator.autoescolaId,
-        payload: { vinculoId: v.id, instrutorId: alvo.instrutor.id, autoescolaId: ator.autoescolaId! },
+        payload: {
+          vinculoId: v.id,
+          instrutorId: alvo.instrutor.id,
+          autoescolaId: ator.autoescolaId!,
+        },
       });
     });
     return this.instrutores(ator);
@@ -207,7 +254,12 @@ export class PainelAutoescolaService {
       const r = await tx
         .update(instrutorVinculos)
         .set({ status: 'encerrado', fimEm: new Date() })
-        .where(and(eq(instrutorVinculos.id, vinculoId), inArray(instrutorVinculos.status, ['convidado', 'ativo'])))
+        .where(
+          and(
+            eq(instrutorVinculos.id, vinculoId),
+            inArray(instrutorVinculos.status, ['convidado', 'ativo']),
+          ),
+        )
         .returning();
       if (!r.length) throw naoEncontrado('vinculo');
     });
@@ -220,7 +272,11 @@ export class PainelAutoescolaService {
     return this.banco.comAtor(ator, async (tx) => {
       const [a] = await tx.select().from(autoescolas).where(eq(autoescolas.id, ator.autoescolaId!));
       if (!a) throw naoEncontrado('autoescola');
-      const fotos = await tx.select().from(autoescolaFotos).where(eq(autoescolaFotos.autoescolaId, a.id)).orderBy(asc(autoescolaFotos.ordem));
+      const fotos = await tx
+        .select()
+        .from(autoescolaFotos)
+        .where(eq(autoescolaFotos.autoescolaId, a.id))
+        .orderBy(asc(autoescolaFotos.ordem));
       const horarios = await tx
         .select()
         .from(autoescolaHorarios)
@@ -231,7 +287,11 @@ export class PainelAutoescolaService {
         mensagemWhatsappPadrao: a.mensagemWhatsappPadrao,
         logoArquivoId: a.logoArquivoId,
         fotos: fotos.map((f) => ({ id: f.id, arquivoId: f.arquivoId, legenda: f.legenda })),
-        horarios: horarios.map((h) => ({ diaSemana: h.diaSemana, abre: formatarHora(h.abre), fecha: formatarHora(h.fecha) })),
+        horarios: horarios.map((h) => ({
+          diaSemana: h.diaSemana,
+          abre: formatarHora(h.abre),
+          fecha: formatarHora(h.fecha),
+        })),
       };
     });
   }
@@ -247,9 +307,13 @@ export class PainelAutoescolaService {
           ...(d.logoArquivoId ? { logoArquivoId: d.logoArquivoId } : {}),
         })
         .where(eq(autoescolas.id, ator.autoescolaId!));
-      await tx.delete(autoescolaHorarios).where(eq(autoescolaHorarios.autoescolaId, ator.autoescolaId!));
+      await tx
+        .delete(autoescolaHorarios)
+        .where(eq(autoescolaHorarios.autoescolaId, ator.autoescolaId!));
       if (d.horarios.length) {
-        await tx.insert(autoescolaHorarios).values(d.horarios.map((h) => ({ ...h, autoescolaId: ator.autoescolaId! })));
+        await tx
+          .insert(autoescolaHorarios)
+          .values(d.horarios.map((h) => ({ ...h, autoescolaId: ator.autoescolaId! })));
       }
     });
     return this.vitrine(ator);
@@ -263,13 +327,20 @@ export class PainelAutoescolaService {
         .from(autoescolaFotos)
         .where(eq(autoescolaFotos.autoescolaId, ator.autoescolaId!))) as [{ n: number }];
       if (n >= 12) throw new ErroDominio('limite_fotos', 'Máximo de 12 fotos na vitrine');
-      await tx.insert(autoescolaFotos).values({ autoescolaId: ator.autoescolaId!, arquivoId, legenda: legenda ?? null, ordem: n });
+      await tx.insert(autoescolaFotos).values({
+        autoescolaId: ator.autoescolaId!,
+        arquivoId,
+        legenda: legenda ?? null,
+        ordem: n,
+      });
     });
     return this.vitrine(ator);
   }
 
   async removerFoto(ator: Ator, fotoId: string) {
-    await this.banco.comAtor(ator, (tx) => tx.delete(autoescolaFotos).where(eq(autoescolaFotos.id, fotoId)));
+    await this.banco.comAtor(ator, (tx) =>
+      tx.delete(autoescolaFotos).where(eq(autoescolaFotos.id, fotoId)),
+    );
     return this.vitrine(ator);
   }
 
@@ -319,7 +390,10 @@ export class PainelAutoescolaService {
         .from(pedidos)
         .where(eq(pedidos.autoescolaId, ator.autoescolaId!));
       const [a] = await tx.select().from(autoescolas).where(eq(autoescolas.id, ator.autoescolaId!));
-      const [m] = await tx.select({ n: sql<number>`count(*)::int` }).from(matriculas).where(eq(matriculas.status, 'ativa'));
+      const [m] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(matriculas)
+        .where(eq(matriculas.status, 'ativa'));
       await this.banco.elevarParaSistema(tx);
       const conta = await contaDe(tx, { tipo: 'autoescola', autoescolaId: ator.autoescolaId! });
       const saldos = await saldosConta(tx, conta.id);
@@ -338,7 +412,12 @@ export class PainelAutoescolaService {
 
   // ---------- Vitrine pública ----------
 
-  async buscarPublico(f: { lat: number; lng: number; raioKm: number; texto?: string }): Promise<AutoescolaCard[]> {
+  async buscarPublico(f: {
+    lat: number;
+    lng: number;
+    raioKm: number;
+    texto?: string;
+  }): Promise<AutoescolaCard[]> {
     const ponto = sql`ST_SetSRID(ST_MakePoint(${f.lng}, ${f.lat}), 4326)::geography`;
     const texto = f.texto?.trim() ? `%${f.texto.trim()}%` : null;
     return this.banco.comAtor({ tipo: 'anonimo' }, async (tx) => {
@@ -387,12 +466,30 @@ export class PainelAutoescolaService {
 
   async perfilPublico(autoescolaId: string): Promise<PerfilAutoescolaPublico> {
     const base = await this.banco.comAtor({ tipo: 'anonimo' }, async (tx) => {
-      const [a] = await tx.select().from(autoescolas).where(and(eq(autoescolas.id, autoescolaId), eq(autoescolas.status, 'aprovada')));
+      const [a] = await tx
+        .select()
+        .from(autoescolas)
+        .where(and(eq(autoescolas.id, autoescolaId), eq(autoescolas.status, 'aprovada')));
       if (!a) throw naoEncontrado('autoescola');
-      const fotos = await tx.select().from(autoescolaFotos).where(eq(autoescolaFotos.autoescolaId, a.id)).orderBy(asc(autoescolaFotos.ordem));
-      const horarios = await tx.select().from(autoescolaHorarios).where(eq(autoescolaHorarios.autoescolaId, a.id)).orderBy(asc(autoescolaHorarios.diaSemana));
+      const fotos = await tx
+        .select()
+        .from(autoescolaFotos)
+        .where(eq(autoescolaFotos.autoescolaId, a.id))
+        .orderBy(asc(autoescolaFotos.ordem));
+      const horarios = await tx
+        .select()
+        .from(autoescolaHorarios)
+        .where(eq(autoescolaHorarios.autoescolaId, a.id))
+        .orderBy(asc(autoescolaHorarios.diaSemana));
       const avs = await tx
-        .select({ id: avaliacoes.id, nota: avaliacoes.nota, comentario: avaliacoes.comentario, resposta: avaliacoes.resposta, criadoEm: avaliacoes.criadoEm, nome: usuarios.nome })
+        .select({
+          id: avaliacoes.id,
+          nota: avaliacoes.nota,
+          comentario: avaliacoes.comentario,
+          resposta: avaliacoes.resposta,
+          criadoEm: avaliacoes.criadoEm,
+          nome: usuarios.nome,
+        })
         .from(avaliacoes)
         .innerJoin(alunos, eq(alunos.id, avaliacoes.autorAlunoId))
         .innerJoin(usuarios, eq(usuarios.id, alunos.usuarioId))
@@ -419,7 +516,11 @@ export class PainelAutoescolaService {
       endereco: `${a.logradouro}, ${a.numero}${a.complemento ? ` ${a.complemento}` : ''} — ${a.bairro}, ${a.municipio}/${a.uf}`,
       telefone: a.telefone,
       fotos: fotos.map((f) => ({ arquivoId: f.arquivoId, legenda: f.legenda })),
-      horarios: horarios.map((h) => ({ diaSemana: h.diaSemana, abre: formatarHora(h.abre), fecha: formatarHora(h.fecha) })),
+      horarios: horarios.map((h) => ({
+        diaSemana: h.diaSemana,
+        abre: formatarHora(h.abre),
+        fecha: formatarHora(h.fecha),
+      })),
       pacotes,
       avaliacoes: avs.map((v) => ({
         id: v.id,
@@ -441,7 +542,13 @@ export class PainelAutoescolaService {
         .from(instrutorVinculos)
         .innerJoin(instrutores, eq(instrutores.id, instrutorVinculos.instrutorId))
         .innerJoin(usuarios, eq(usuarios.id, instrutores.usuarioId))
-        .where(and(eq(instrutorVinculos.autoescolaId, autoescolaId), eq(instrutorVinculos.status, 'ativo'), eq(instrutores.status, 'aprovado')))
+        .where(
+          and(
+            eq(instrutorVinculos.autoescolaId, autoescolaId),
+            eq(instrutorVinculos.status, 'ativo'),
+            eq(instrutores.status, 'aprovado'),
+          ),
+        )
         .orderBy(usuarios.nome),
     );
   }

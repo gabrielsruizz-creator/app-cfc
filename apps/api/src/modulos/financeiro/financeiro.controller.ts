@@ -1,5 +1,9 @@
 import { Body, Controller, Get, Headers, Post, Put } from '@nestjs/common';
-import { contaRecebimentoEntrada, solicitarSaque, type ContaRecebimentoEntrada } from '@volante/contracts';
+import {
+  contaRecebimentoEntrada,
+  solicitarSaque,
+  type ContaRecebimentoEntrada,
+} from '@volante/contracts';
 import { atorAutoescola, atorInstrutor, SessaoAtual, type Sessao } from '../../nucleo/auth/sessao';
 import { ZodPipe } from '../../nucleo/zod.pipe';
 import { FinanceiroService } from './financeiro.service';
@@ -14,12 +18,18 @@ export class FinanceiroController {
   }
 
   @Put('instrutor/conta-recebimento')
-  contaInstrutor(@SessaoAtual() s: Sessao, @Body(new ZodPipe(contaRecebimentoEntrada)) d: ContaRecebimentoEntrada) {
+  contaInstrutor(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(contaRecebimentoEntrada)) d: ContaRecebimentoEntrada,
+  ) {
     return this.servico.salvarContaRecebimento(atorInstrutor(s), d);
   }
 
   @Post('instrutor/saques')
-  sacarInstrutor(@SessaoAtual() s: Sessao, @Body(new ZodPipe(solicitarSaque)) d: { valorCentavos: number }) {
+  sacarInstrutor(
+    @SessaoAtual() s: Sessao,
+    @Body(new ZodPipe(solicitarSaque)) d: { valorCentavos: number },
+  ) {
     return this.servico.sacar(atorInstrutor(s), d.valorCentavos);
   }
 
@@ -38,7 +48,11 @@ export class FinanceiroController {
   }
 
   @Post('autoescola/saques')
-  sacarAutoescola(@SessaoAtual() s: Sessao, @Headers('x-autoescola-id') a: string | undefined, @Body(new ZodPipe(solicitarSaque)) d: { valorCentavos: number }) {
+  sacarAutoescola(
+    @SessaoAtual() s: Sessao,
+    @Headers('x-autoescola-id') a: string | undefined,
+    @Body(new ZodPipe(solicitarSaque)) d: { valorCentavos: number },
+  ) {
     return this.servico.sacar(atorAutoescola(s, a), d.valorCentavos);
   }
 }
