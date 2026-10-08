@@ -13,7 +13,11 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'volante_app') THEN
-    CREATE ROLE volante_app NOLOGIN;
+    BEGIN
+      CREATE ROLE volante_app NOLOGIN;
+    EXCEPTION WHEN duplicate_object OR unique_violation THEN
+      NULL; -- outro processo criou o papel ao mesmo tempo (o papel é global no servidor)
+    END;
   END IF;
   EXECUTE format('GRANT volante_app TO %I', current_user);
 END $$;
