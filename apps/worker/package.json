@@ -1,0 +1,26 @@
+{
+  "name": "@volante/worker",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput & node --watch --enable-source-maps dist/main.js",
+    "start": "node --enable-source-maps dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@volante/contracts": "workspace:*",
+    "@volante/db": "workspace:*",
+    "@volante/dominio": "workspace:*",
+    "pg": "^8.16.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.0",
+    "@types/pg": "^8.15.0",
+    "luxon": "^3.7.0",
+    "vitest": "^3.2.4"
+  }
+}
