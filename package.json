@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build:pacotes": "pnpm --filter @volante/contracts --filter @volante/db build",
+    "build:pacotes": "pnpm --filter @volante/contracts build && pnpm --filter @volante/db build && pnpm --filter @volante/dominio build",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
