@@ -125,6 +125,24 @@ Prazos da fila (lembrete em 48 h e expiração em 5 dias) e demais regras ficam 
 
 As posições do instrutor só são gravadas entre "a caminho" e o check-out e são apagadas depois de 30 dias.
 
+### Roteiro de teste da Fase 4 (integração com o CFC Plus)
+
+Precisa do CFC Plus rodando (repositório `CFC-Plus`, branch com a integração; API em `:3333`). Os dois painéis
+usam a porta 5173: o que subir depois vai sozinho para a 5174.
+
+1. **CFC Plus:** Administração › **Integrações** › **Gerar chave para o app Volante**. Copie a chave (aparece uma vez)
+   e o endereço mostrado.
+2. **Volante:** painel da autoescola (dono ou gerente) › **Integrações** › cole o endereço (no computador, use
+   `http://localhost:3333`, a API do CFC Plus) e a chave › **Conectar e testar**. Em segundos fica **Conectada** com o nome do CFC. Chave errada mostra "Com problema" e o motivo.
+3. **Venda:** no app, um aluno compra um pacote da autoescola e paga (Simular pagamento). Em **Últimos envios** aparece
+   "Venda paga · Recebido"; no CFC Plus, **Secretaria › Vendas do app** mostra a venda com os dados do aluno.
+4. **CFC Plus:** **Cadastrar aluno** cria a ficha (origem "App Volante"); **Fazer matrícula** segue o fluxo normal e,
+   depois, **Vincular** marca a venda como matriculada.
+5. **Enviar pedidos já recebidos** reenvia as vendas pagas antes da conexão (sem duplicar do outro lado).
+
+Se o CFC Plus estiver fora do ar, o envio fica "Tentando de novo" e o worker repete com espera crescente.
+Contrato da API em [docs/integracao-cfc-plus.md](docs/integracao-cfc-plus.md).
+
 ### Pagamento em modo de teste
 
 Com `PAGAMENTO_GATEWAY=simulado` (já é o valor do `.env.exemplo`), o Pix gerado é fictício. Na tela de pagamento do app aparece
@@ -151,7 +169,7 @@ pnpm test        # usa um Postgres real (TEST_DATABASE_URL; padrão: postgres://
 Cobrem: isolamento entre autoescolas (RLS), agenda sem conflito mesmo com reservas simultâneas,
 fluxo do dinheiro (retenção, liberação com comissão, estornos, multa), auditoria imutável,
 worker (Pix simulado, gateway não configurado, novas tentativas, prazos, documentos vencidos),
-adaptador Asaas (Pix e cartão parcelado), os fluxos completos das Fases 1, 2 e 3 pela API (fila da autoescola,
+adaptador Asaas (Pix e cartão parcelado), adaptador e envios ao CFC Plus, os fluxos completos das Fases 1 a 4 pela API (fila da autoescola,
 pacotes, saldo de aulas, chat, financeiro, disputas, moderação, cupons, cartão, rastreamento, link do contato de
 confiança, relatórios e CSV) e as rotinas do worker (lembrete/expiração de pedidos, validade de pacotes, saque via Pix
 com devolução em caso de falha, expurgo de posições).
@@ -164,4 +182,5 @@ com devolução em caso de falha, expurgo de posições).
   saldo de aulas, chat, financeiro e saque do instrutor/autoescola, disputas, denúncias e painel admin completo.
 - **Fase 3 (entregue):** instrutor a caminho com mapa ao vivo, link para contato de confiança, cupons (pagos pela
   plataforma ou pelo parceiro), relatórios com exportação CSV e cartão de crédito parcelado.
-- **Fase 4:** integração com o CFC Plus.
+- **Fase 4 (entregue):** integração opcional, por autoescola, com o ERP CFC Plus: chave gerada no CFC Plus, teste de
+  conexão, envio das vendas (pagas, confirmadas, recusadas, expiradas) com novas tentativas e histórico de envios.

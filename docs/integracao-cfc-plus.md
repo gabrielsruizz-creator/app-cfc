@@ -19,7 +19,7 @@ Chamadas servidor a servidor (sem cookie e sem cabeçalho `Origin`).
 
 | Método e caminho | Resposta                                                                               |
 | ---------------- | -------------------------------------------------------------------------------------- |
-| `GET /status`    | `200 { "ok": true, "cfc": { "nome": "Auto Escola Albatroz" } }`                        |
+| `GET /status`    | `200 { "ok": true, "versao": 1, "cfc": { "nome": "Auto Escola Albatroz" } }`           |
 | `POST /eventos`  | `200 { "recebido": true, "vendaId": "…", "duplicado": false }` (idempotente pelo `id`) |
 
 Erros: `401` chave inválida ou revogada · `400` corpo inválido · `5xx` falha passageira (o Volante tenta de
@@ -70,11 +70,12 @@ novo com espera exponencial, até 10 vezes). `409` é tratado como "já recebido
 - O CFC Plus guarda **o estado mais recente** de cada pedido (pelo `pedido.id`), ignorando eventos mais antigos
   que o último recebido (`ocorridoEm`).
 - `valorPagoCentavos` foi pago **pelo app** (Pix ou cartão); o app repassa à autoescola o `valorLiquidoCentavos`
-  quando ela confirma a matrícula. No CFC Plus, a matrícula registra essa entrada como "Pago pelo app Volante".
+  quando ela confirma a matrícula. No CFC Plus, a tela da venda mostra os dois valores e lembra a secretaria de
+  registrar as parcelas da matrícula como já recebidas (não há lançamento automático no financeiro do CFC Plus).
 
 ## Onde está no código
 
 - Volante: `apps/worker/src/consumidores/cfc-plus.ts` (envio e registro em `operacoes_integracao`),
   `apps/worker/src/adaptadores/cfc-plus-http.ts`, `apps/api/src/modulos/integracoes/`, tela Integrações do painel.
-- CFC Plus: módulo `integracoes/volante` (API), migration `0023_integracao_volante.sql`, telas
-  Administração › Integrações e Secretaria › Vendas do app.
+- CFC Plus: `apps/api/src/integracoes/` (API), migration `0023_integracao_volante.sql`, telas
+  Administração › Integrações e Secretaria › Vendas do app; contrato do lado de lá em `docs/INTEGRACAO-VOLANTE.md`.
