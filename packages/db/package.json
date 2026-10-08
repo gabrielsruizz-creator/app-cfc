@@ -1,0 +1,38 @@
+{
+  "name": "@volante/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean --shims",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --shims --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "gerar": "drizzle-kit generate && node scripts/corrigir-migracoes.mjs",
+    "migrar": "tsx src/cli/migrar.ts",
+    "semear": "tsx src/cli/semear.ts"
+  },
+  "dependencies": {
+    "@volante/contracts": "workspace:*",
+    "drizzle-orm": "^0.45.0",
+    "pg": "^8.16.0",
+    "uuidv7": "^1.0.2"
+  },
+  "devDependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "@types/pg": "^8.15.0",
+    "drizzle-kit": "^0.31.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.0",
+    "vitest": "^3.2.4"
+  }
+}

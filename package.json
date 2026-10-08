@@ -1,0 +1,27 @@
+{
+  "name": "volante",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build:pacotes": "pnpm --filter @volante/contracts --filter @volante/db build",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
+    "db:migrar": "pnpm --filter @volante/db migrar",
+    "db:semear": "pnpm --filter @volante/db semear",
+    "dev:api": "pnpm --filter @volante/api dev",
+    "dev:worker": "pnpm --filter @volante/worker dev",
+    "dev:web": "pnpm --filter @volante/web dev",
+    "dev:mobile": "pnpm --filter @volante/mobile start"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.3"
+  }
+}
