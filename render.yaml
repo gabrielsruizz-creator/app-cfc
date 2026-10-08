@@ -11,6 +11,8 @@ databases:
   - name: volante-banco
     plan: free
     databaseName: volante
+    # mesma região do serviço (a conexão interna só funciona na mesma região)
+    region: virginia
     postgresMajorVersion: '17'
 
 services:
