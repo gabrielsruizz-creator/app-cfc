@@ -7,8 +7,10 @@ import { FlatList, Modal, Pressable, ScrollView, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  Aviso,
   Avatar,
   Botao,
+  Campo,
   Cartao,
   Carregando,
   Chip,
@@ -20,11 +22,16 @@ import {
   Texto,
   Vazio,
 } from '../../src/componentes/ui';
-import { api } from '../../src/servicos/api';
+import { api, mensagemDeErro } from '../../src/servicos/api';
 import { useAuth } from '../../src/servicos/AuthProvider';
 import { espaco, raio } from '../../src/tema/cores';
 import { useTema } from '../../src/tema/TemaProvider';
-import { obterLocalizacao, PONTO_PADRAO, type Ponto } from '../../src/util/dispositivo';
+import {
+  obterLocalizacao,
+  PONTO_PADRAO,
+  pontoDeEndereco,
+  type Ponto,
+} from '../../src/util/dispositivo';
 import { formatarCentavos } from '../../src/util/formatos';
 
 type Filtros = {
@@ -116,6 +123,27 @@ export default function Buscar() {
   });
   const [rascunho, setRascunho] = useState<Filtros>(filtros);
   const [semLocalizacao, setSemLocalizacao] = useState(false);
+  const [regiao, setRegiao] = useState('');
+  const [regiaoEscolhida, setRegiaoEscolhida] = useState<string | null>(null);
+  const [erroRegiao, setErroRegiao] = useState<string | null>(null);
+
+  async function buscarRegiao() {
+    if (!regiao.trim()) return;
+    setErroRegiao(null);
+    const p = await pontoDeEndereco(regiao);
+    if (!p) return setErroRegiao('Endereço não encontrado. Tente incluir a cidade.');
+    setPonto(p);
+    setRegiaoEscolhida(regiao.trim());
+  }
+
+  async function usarMinhaLocalizacao() {
+    const p = await obterLocalizacao({ exigir: true });
+    if (!p) return;
+    setPonto(p);
+    setRegiaoEscolhida(null);
+    setRegiao('');
+    setSemLocalizacao(false);
+  }
 
   useEffect(() => {
     obterLocalizacao().then((p) => {
@@ -142,11 +170,35 @@ export default function Buscar() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: cores.fundo }}>
       <View style={{ padding: espaco.lg, gap: espaco.md }}>
-        <Texto tipo="titulo">Instrutores perto de você</Texto>
-        {semLocalizacao && (
+        <Texto tipo="titulo">
+          {regiaoEscolhida
+            ? `Instrutores perto de ${regiaoEscolhida}`
+            : 'Instrutores perto de você'}
+        </Texto>
+        {semLocalizacao && !regiaoEscolhida && (
           <Texto tipo="pequeno">
             Localização não liberada — mostrando a região central de São Paulo.
           </Texto>
+        )}
+        <Linha>
+          <View style={{ flex: 1 }}>
+            <Campo
+              rotulo="Buscar em outra região"
+              value={regiao}
+              onChangeText={setRegiao}
+              onSubmitEditing={buscarRegiao}
+              returnKeyType="search"
+              placeholder="Ex.: Av. Paulista, São Paulo"
+              erro={erroRegiao ?? undefined}
+            />
+          </View>
+        </Linha>
+        {regiaoEscolhida && (
+          <Chip
+            rotulo="Usar minha localização"
+            icone="locate"
+            aoPressionar={usarMinhaLocalizacao}
+          />
         )}
         <Linha>
           <Chip
@@ -176,6 +228,17 @@ export default function Buscar() {
 
       {q.isLoading ? (
         <Carregando />
+      ) : q.isError ? (
+        <View style={{ padding: espaco.lg, gap: espaco.md }}>
+          <Aviso tipo="erro" titulo="Não foi possível buscar instrutores">
+            {mensagemDeErro(q.error)}
+          </Aviso>
+          <Botao
+            titulo="Tentar de novo"
+            variante="secundario"
+            aoPressionar={() => void q.refetch()}
+          />
+        </View>
       ) : visao === 'mapa' ? (
         <MapView
           style={{ flex: 1 }}

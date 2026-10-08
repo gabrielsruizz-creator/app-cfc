@@ -202,7 +202,14 @@ async function semearDemo(db: Db) {
         `+551192222000${i}`,
         d.genero,
       );
-      if (!novo) continue;
+      if (!novo) {
+        // Rodar de novo com outro DEMO_LAT/DEMO_LNG move os instrutores de demonstração.
+        await tx
+          .update(instrutores)
+          .set({ baseLocalizacao: { lat: centro.lat + d.dLat, lng: centro.lng + d.dLng } })
+          .where(eq(instrutores.usuarioId, usuario.id));
+        continue;
+      }
       const [instrutor] = await tx
         .insert(instrutores)
         .values({
