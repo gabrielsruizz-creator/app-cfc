@@ -502,6 +502,25 @@ export async function cancelarAula(
 }
 
 /**
+ * Carga horária de uma aula. `realizados` é o tempo real entre check-in e check-out (null sem os dois);
+ * `contados` é o que entra nas horas do aluno: o realizado, limitado à duração agendada
+ * (aula que passou do horário não gera horas além das contratadas; sem check-out, vale a agendada).
+ */
+export function cargaHoraria(aula: {
+  inicio: Date;
+  fim: Date;
+  checkinEm: Date | null;
+  checkoutEm: Date | null;
+}) {
+  const agendados = Math.round((aula.fim.getTime() - aula.inicio.getTime()) / 60_000);
+  const realizados =
+    aula.checkinEm && aula.checkoutEm
+      ? Math.max(0, Math.round((aula.checkoutEm.getTime() - aula.checkinEm.getTime()) / 60_000))
+      : null;
+  return { agendados, realizados, contados: Math.min(realizados ?? agendados, agendados) };
+}
+
+/**
  * Fim da aula confirmado (pelo aluno ou automaticamente): consome o crédito e libera o valor ao instrutor.
  */
 export async function concluirAula(
@@ -513,10 +532,15 @@ export async function concluirAula(
   const agora = opcoes.agora ?? new Date();
   const aula = await carregarAulaParaAlterar(tx, aulaId);
   if (aula.status === 'concluida') return aula;
+  const { realizados, contados } = cargaHoraria(aula);
   const concluida = await mudarStatusAula(tx, aula, 'concluida', {
     atorUsuarioId: opcoes.atorUsuarioId,
     motivo: por === 'aluno' ? 'Fim da aula confirmado pelo aluno' : 'Confirmado automaticamente',
-    extras: { checkoutConfirmadoEm: agora, checkoutConfirmadoPor: por },
+    extras: {
+      checkoutConfirmadoEm: agora,
+      checkoutConfirmadoPor: por,
+      minutosRealizados: realizados,
+    },
   });
   await movimentarCredito(tx, aula.creditoId, aula.id, 'consumo');
   const pedido = await carregarPedido(tx, aula.pedidoId);
@@ -535,11 +559,10 @@ export async function concluirAula(
   }
   if (credito?.status === 'esgotado') await mudarStatusPedido(tx, pedido, 'encerrado');
 
-  const minutos = Math.round((aula.fim.getTime() - aula.inicio.getTime()) / 60_000);
   await tx
     .update(alunos)
     .set({
-      horasAcumuladasMin: sql`${alunos.horasAcumuladasMin} + ${minutos}`,
+      horasAcumuladasMin: sql`${alunos.horasAcumuladasMin} + ${contados}`,
       aulasConcluidas: sql`${alunos.aulasConcluidas} + 1`,
     })
     .where(eq(alunos.id, aula.alunoId));

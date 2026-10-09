@@ -164,6 +164,41 @@ export const evolucaoAluno = z.object({
 });
 export type EvolucaoAluno = z.infer<typeof evolucaoAluno>;
 
+/** Extrato de aulas concluídas: comprovante de carga horária do aluno. */
+export const itemExtratoAulas = z.object({
+  aulaId: id,
+  inicio: z.string(),
+  fim: z.string(),
+  checkinEm: z.string().nullable(),
+  checkoutEm: z.string().nullable(),
+  minutosAgendados: z.number(),
+  /** Tempo real (check-in → check-out); null quando a aula não teve os dois registros. */
+  minutosRealizados: z.number().nullable(),
+  /** O que entra nas horas do aluno: o realizado, limitado ao agendado. */
+  minutosContados: z.number(),
+  categoria: z.string(),
+  instrutor: z.string(),
+  autoescola: z.string().nullable(),
+  veiculo: z.string().nullable(),
+  pontoEncontro: z.string(),
+  habilidades: z.array(z.object({ nome: z.string(), nivel: z.number() })),
+  anotacao: z.string().nullable(),
+});
+export type ItemExtratoAulas = z.infer<typeof itemExtratoAulas>;
+
+export const extratoAulas = z.object({
+  aluno: z.object({ nome: z.string(), cpf: z.string().nullable(), categoriaDesejada: z.string() }),
+  totais: z.object({
+    aulas: z.number(),
+    minutosAgendados: z.number(),
+    minutosRealizados: z.number(),
+    minutosContados: z.number(),
+  }),
+  aulas: z.array(itemExtratoAulas),
+  geradoEm: z.string(),
+});
+export type ExtratoAulas = z.infer<typeof extratoAulas>;
+
 export const recibo = z.object({
   id,
   numero: z.number(),

@@ -9,6 +9,7 @@ import {
   operacoesIntegracao,
   pedidos,
   publicarEvento,
+  sql,
   type Ator,
   type Tx,
 } from '@volante/db';
@@ -17,7 +18,7 @@ import { BancoService } from '../../nucleo/banco.service';
 
 const NOME = 'CFC Plus';
 const DESCRICAO =
-  'Envie automaticamente as vendas do app para o seu ERP CFC Plus: o aluno chega pronto para a matrícula, sem digitação.';
+  'Envie automaticamente as vendas e as aulas do app para o seu ERP CFC Plus: o aluno chega pronto para a matrícula e cada aula concluída entra na agenda, sem digitação.';
 
 /** cfcp_ab12cd_****…wxyz — prefixo e final, nunca a chave inteira. */
 export const mascararChave = (chave: string) => {
@@ -58,7 +59,13 @@ export class IntegracoesService {
     return this.banco.comAtor(ator, async (tx) => {
       const l = await this.linha(tx, ator.autoescolaId!);
       const operacoes = await tx
-        .select({ o: operacoesIntegracao, codigo: pedidos.codigo })
+        .select({
+          o: operacoesIntegracao,
+          // aulas guardam o código do pedido no envio
+          codigo: sql<
+            string | null
+          >`coalesce(${pedidos.codigo}, ${operacoesIntegracao.requisicao}->'aula'->>'pedidoCodigo')`,
+        })
         .from(operacoesIntegracao)
         .leftJoin(pedidos, eq(pedidos.id, operacoesIntegracao.idInterno))
         .where(

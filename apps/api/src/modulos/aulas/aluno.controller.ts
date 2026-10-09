@@ -147,6 +147,12 @@ export class AlunoController {
     return this.alunos.evolucao(ator, ator.alunoId);
   }
 
+  @Get('extrato-aulas')
+  extratoAulas(@SessaoAtual() s: Sessao) {
+    const ator = atorAluno(s);
+    return this.alunos.extrato(ator, ator.alunoId);
+  }
+
   @Get('recibos')
   recibos(@SessaoAtual() s: Sessao) {
     return this.alunos.recibos(atorAluno(s));

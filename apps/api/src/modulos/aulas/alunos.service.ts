@@ -1,22 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import type { CriarPerfilAluno, EvolucaoAluno, Recibo } from '@volante/contracts';
+import type { CriarPerfilAluno, EvolucaoAluno, ExtratoAulas, Recibo } from '@volante/contracts';
 import {
   alunos,
   and,
+  asc,
   aulaAnotacoes,
   aulas,
+  autoescolas,
   cobrancas,
   desc,
   eq,
   habilidades,
+  inArray,
   instrutores,
   recibos,
   registrosEvolucao,
   sql,
   usuarios,
+  veiculos,
   type Ator,
 } from '@volante/db';
-import { ErroDominio, naoEncontrado } from '@volante/dominio';
+import { cargaHoraria, ErroDominio, naoEncontrado } from '@volante/dominio';
 import type { Sessao } from '../../nucleo/auth/sessao';
 import { BancoService } from '../../nucleo/banco.service';
 import { ArquivosService } from '../arquivos/arquivos.service';
@@ -141,6 +145,87 @@ export class AlunosService {
             instrutor: a.instrutor,
             texto: a.texto,
           })),
+      };
+    });
+  }
+
+  /** Aulas concluídas com horários reais, minutos, instrutor e o que foi trabalhado em cada uma. */
+  async extrato(ator: Ator, alunoId: string): Promise<ExtratoAulas> {
+    return this.banco.comAtor(ator, async (tx) => {
+      const [aluno] = await tx
+        .select({ nome: usuarios.nome, cpf: usuarios.cpf, categoria: alunos.categoriaDesejada })
+        .from(alunos)
+        .innerJoin(usuarios, eq(usuarios.id, alunos.usuarioId))
+        .where(eq(alunos.id, alunoId));
+      if (!aluno) throw naoEncontrado('aluno');
+      const linhas = await tx
+        .select({
+          aula: aulas,
+          instrutor: usuarios.nome,
+          autoescola: autoescolas.nomeFantasia,
+          veiculo: veiculos,
+        })
+        .from(aulas)
+        .innerJoin(instrutores, eq(instrutores.id, aulas.instrutorId))
+        .innerJoin(usuarios, eq(usuarios.id, instrutores.usuarioId))
+        .leftJoin(autoescolas, eq(autoescolas.id, aulas.autoescolaId))
+        .leftJoin(veiculos, eq(veiculos.id, aulas.veiculoId))
+        .where(and(eq(aulas.alunoId, alunoId), eq(aulas.status, 'concluida')))
+        .orderBy(asc(aulas.inicio));
+      const ids = linhas.map((l) => l.aula.id);
+      const evolucao = ids.length
+        ? await tx
+            .select({
+              aulaId: registrosEvolucao.aulaId,
+              nome: habilidades.nome,
+              nivel: registrosEvolucao.nivel,
+              ordem: habilidades.ordem,
+            })
+            .from(registrosEvolucao)
+            .innerJoin(habilidades, eq(habilidades.id, registrosEvolucao.habilidadeId))
+            .where(
+              and(eq(registrosEvolucao.alunoId, alunoId), inArray(registrosEvolucao.aulaId, ids)),
+            )
+            .orderBy(asc(habilidades.ordem))
+        : [];
+      const anotacoes = ids.length
+        ? await tx.select().from(aulaAnotacoes).where(eq(aulaAnotacoes.alunoId, alunoId))
+        : [];
+      const itens = linhas.map(({ aula: a, instrutor, autoescola, veiculo }) => {
+        const c = cargaHoraria(a);
+        const nota = anotacoes.find((n) => n.aulaId === a.id);
+        return {
+          aulaId: a.id,
+          inicio: a.inicio.toISOString(),
+          fim: a.fim.toISOString(),
+          checkinEm: a.checkinEm?.toISOString() ?? null,
+          checkoutEm: a.checkoutEm?.toISOString() ?? null,
+          minutosAgendados: c.agendados,
+          minutosRealizados: a.minutosRealizados ?? c.realizados,
+          minutosContados: c.contados,
+          categoria: a.categoria,
+          instrutor,
+          autoescola: autoescola ?? null,
+          veiculo: veiculo
+            ? `${veiculo.marca} ${veiculo.modelo}${veiculo.cor ? ` ${veiculo.cor.toLowerCase()}` : ''} · ${veiculo.placa}`
+            : null,
+          pontoEncontro: a.pontoEncontroEndereco,
+          habilidades: evolucao
+            .filter((e) => e.aulaId === a.id)
+            .map((e) => ({ nome: e.nome, nivel: e.nivel })),
+          anotacao: nota && (ator.tipo !== 'aluno' || nota.visivelAluno) ? nota.texto : null,
+        };
+      });
+      return {
+        aluno: { nome: aluno.nome, cpf: aluno.cpf, categoriaDesejada: aluno.categoria },
+        totais: {
+          aulas: itens.length,
+          minutosAgendados: itens.reduce((s, i) => s + i.minutosAgendados, 0),
+          minutosRealizados: itens.reduce((s, i) => s + (i.minutosRealizados ?? 0), 0),
+          minutosContados: itens.reduce((s, i) => s + i.minutosContados, 0),
+        },
+        aulas: itens.reverse(),
+        geradoEm: new Date().toISOString(),
       };
     });
   }

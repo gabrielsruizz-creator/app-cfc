@@ -1,11 +1,14 @@
-import type { EventoCfcPlus } from '@volante/contracts';
+import type { AulaCfcPlus, EventoCfcPlus } from '@volante/contracts';
 import {
   ATOR_SISTEMA,
+  aulas,
   comAtor,
+  creditosAula,
   criarBancoTeste,
   eq,
   fabricarAluno,
   fabricarAutoescola,
+  fabricarInstrutorAprovado,
   integracoesAutoescola,
   operacoesIntegracao,
   outboxEventos,
@@ -42,6 +45,11 @@ class CfcPlusFalso implements CfcPlusPort {
   }
   async enviarEvento(conexao: ConexaoCfcPlus, evento: EventoCfcPlus) {
     this.recebidos.push({ conexao, evento });
+    return this.respostaEnvio;
+  }
+  aulas: AulaCfcPlus[] = [];
+  async enviarAula(_conexao: ConexaoCfcPlus, aula: AulaCfcPlus) {
+    this.aulas.push(aula);
     return this.respostaEnvio;
   }
 }
@@ -238,6 +246,117 @@ describe('envio das vendas', () => {
   });
 });
 
+/** Aula concluída (47 min reais de 50 agendados) de um pacote da autoescola, já com o evento no outbox. */
+async function aulaConcluida(autoescolaId: string) {
+  const { pedido, aluno } = await venderPacote(autoescolaId);
+  const { instrutor } = await fabricarInstrutorAprovado(banco.db);
+  const inicio = new Date(Date.now() - 2 * 3600_000);
+  const aula = await sistema(async (tx) => {
+    const [credito] = await tx
+      .select()
+      .from(creditosAula)
+      .where(eq(creditosAula.pedidoId, pedido.id));
+    const [a] = await tx
+      .insert(aulas)
+      .values({
+        alunoId: aluno.id,
+        instrutorId: instrutor.id,
+        autoescolaId,
+        pedidoId: pedido.id,
+        creditoId: credito!.id,
+        categoria: 'B',
+        inicio,
+        fim: new Date(inicio.getTime() + 50 * 60_000),
+        valorCentavos: 9000,
+        pontoEncontro: { lat: -23.56, lng: -46.65 },
+        pontoEncontroEndereco: 'Av. Paulista, 1000',
+        status: 'concluida',
+        codigoCheckin: '1234',
+        checkinEm: new Date(inicio.getTime() + 2 * 60_000),
+        checkoutEm: new Date(inicio.getTime() + 49 * 60_000),
+        minutosRealizados: 47,
+        politicaCancelamento: { gratisAteHoras: 24, multaBp: 5000 },
+      })
+      .returning();
+    await publicarEvento(tx, {
+      tipo: 'aula.concluida',
+      agregadoTipo: 'aula',
+      agregadoId: a!.id,
+      autoescolaId,
+      payload: { aulaId: a!.id, alunoId: aluno.id, instrutorId: instrutor.id },
+    });
+    return a!;
+  });
+  return { aula, pedido, aluno };
+}
+
+describe('envio das aulas para a agenda do CFC Plus', () => {
+  it('aula concluída vai com horários reais, minutos e instrutor; evolução depois reenvia', async () => {
+    const autoescola = await autoescolaConectando();
+    await processarTudo(deps, CONSUMIDORES);
+    const { aula, pedido, aluno } = await aulaConcluida(autoescola.id);
+    await processarTudo(deps, CONSUMIDORES);
+    expect(cfc.aulas).toHaveLength(1);
+    expect(cfc.aulas[0]).toMatchObject({
+      versao: 1,
+      tipo: 'aula.concluida',
+      aula: {
+        id: aula.id,
+        pedidoCodigo: pedido.codigo,
+        categoria: 'B',
+        minutosAgendados: 50,
+        minutosRealizados: 47,
+        minutosContados: 47,
+        veiculo: null,
+        pontoEncontro: 'Av. Paulista, 1000',
+      },
+      aluno: { id: aluno.id },
+    });
+    expect(cfc.aulas[0]!.aula.instrutor.cpf).toMatch(/^\d{11}$/);
+    const [op] = await sistema((tx) =>
+      tx.select().from(operacoesIntegracao).where(eq(operacoesIntegracao.idInterno, aula.id)),
+    );
+    expect(op).toMatchObject({ tipoRegistro: 'aula', status: 'sucesso' });
+
+    await sistema((tx) =>
+      publicarEvento(tx, {
+        tipo: 'aula.evolucao_registrada',
+        agregadoTipo: 'aula',
+        agregadoId: aula.id,
+        autoescolaId: autoescola.id,
+        payload: { aulaId: aula.id, alunoId: aluno.id, instrutorId: aula.instrutorId },
+      }),
+    );
+    await processarTudo(deps, CONSUMIDORES);
+    expect(cfc.aulas.map((a) => a.tipo)).toEqual(['aula.concluida', 'aula.atualizada']);
+  });
+
+  it('reenviar vendas e aulas inclui as aulas concluídas; autoescola sem integração não envia', async () => {
+    const { autoescola: semIntegracao } = await fabricarAutoescola(banco.db);
+    await aulaConcluida(semIntegracao.id);
+    await processarTudo(deps, CONSUMIDORES);
+    expect(cfc.aulas).toHaveLength(0);
+
+    const conectada = await autoescolaConectando();
+    await processarTudo(deps, CONSUMIDORES);
+    await aulaConcluida(conectada.id);
+    await processarTudo(deps, CONSUMIDORES);
+    cfc.aulas = [];
+    await sistema((tx) =>
+      publicarEvento(tx, {
+        tipo: 'integracao.sincronizar',
+        agregadoTipo: 'integracao',
+        agregadoId: conectada.id,
+        autoescolaId: conectada.id,
+        payload: { autoescolaId: conectada.id },
+      }),
+    );
+    await processarTudo(deps, CONSUMIDORES);
+    expect(cfc.aulas).toHaveLength(1);
+    expect(cfc.aulas[0]!.id).toMatch(/^sync:/);
+  });
+});
+
 describe('adaptador HTTP', () => {
   const chamadas: { url: string; init?: RequestInit }[] = [];
   const responder = (status: number, corpo: unknown) =>
@@ -275,6 +394,13 @@ describe('adaptador HTTP', () => {
       reprocessar: true,
       motivo: 'falhou',
     });
+    // 404 na rota de aulas = CFC Plus desatualizado: tenta de novo, sem derrubar a conexão
+    const desatualizado = await new CfcPlusHttp(responder(404, {})).enviarAula(
+      CONEXAO,
+      {} as AulaCfcPlus,
+    );
+    expect(desatualizado).toMatchObject({ status: 'erro', reprocessar: true });
+    expect(desatualizado).not.toHaveProperty('credencialInvalida');
     const semRede = (async () => {
       throw new Error('ECONNREFUSED');
     }) as unknown as typeof fetch;

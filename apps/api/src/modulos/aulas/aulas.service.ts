@@ -423,6 +423,16 @@ export class AulasService {
             set: { texto: dados.anotacao, visivelAluno: dados.anotacaoVisivelAluno },
           });
       }
+      // Aula já concluída: a autoescola conectada ao CFC Plus recebe a evolução atualizada.
+      if (aula.status === 'concluida' && aula.autoescolaId) {
+        await publicarEvento(tx, {
+          tipo: 'aula.evolucao_registrada',
+          agregadoTipo: 'aula',
+          agregadoId: aula.id,
+          autoescolaId: aula.autoescolaId,
+          payload: { aulaId: aula.id, alunoId: aula.alunoId, instrutorId: aula.instrutorId },
+        });
+      }
     });
   }
 }

@@ -1,4 +1,4 @@
-import type { EventoCfcPlus } from '@volante/contracts';
+import type { AulaCfcPlus, EventoCfcPlus } from '@volante/contracts';
 import type { CfcPlusPort, ConexaoCfcPlus, ResultadoCfcPlus } from '../portas/cfc-plus';
 
 type Fetch = typeof fetch;
@@ -20,6 +20,8 @@ export class CfcPlusHttp implements CfcPlusPort {
     metodo: 'GET' | 'POST',
     caminho: string,
     corpo?: unknown,
+    /** 404 em rota nova significa CFC Plus desatualizado, não endereço errado. */
+    rotaNova = false,
   ): Promise<ResultadoCfcPlus> {
     let r: Response;
     try {
@@ -64,6 +66,15 @@ export class CfcPlusHttp implements CfcPlusPort {
         resposta,
         httpStatus: r.status,
       };
+    if (r.status === 404 && rotaNova)
+      return {
+        status: 'erro',
+        motivo:
+          'Este CFC Plus ainda não recebe aulas do app. Atualize o CFC Plus; o envio é repetido.',
+        reprocessar: true,
+        resposta,
+        httpStatus: r.status,
+      };
     if (r.status === 404)
       return {
         status: 'erro',
@@ -89,5 +100,9 @@ export class CfcPlusHttp implements CfcPlusPort {
 
   enviarEvento(conexao: ConexaoCfcPlus, evento: EventoCfcPlus) {
     return this.chamar(conexao, 'POST', '/eventos', evento);
+  }
+
+  enviarAula(conexao: ConexaoCfcPlus, aula: AulaCfcPlus) {
+    return this.chamar(conexao, 'POST', '/aulas', aula, true);
   }
 }

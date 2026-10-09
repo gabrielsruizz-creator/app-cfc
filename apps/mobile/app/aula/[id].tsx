@@ -28,6 +28,7 @@ import {
   hora,
   NOMES_STATUS_AULA,
 } from '../../src/util/formatos';
+import { TempoAula } from '../../src/componentes/TempoAula';
 
 export default function AulaAluno() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -130,6 +131,8 @@ export default function AulaAluno() {
       )}
 
       {(a.status === 'a_caminho' || a.status === 'em_andamento') && <MapaAoVivo aulaId={a.id} />}
+
+      <TempoAula aula={a} />
 
       {a.status === 'aguardando_confirmacao' && (
         <Aviso tipo="alerta" titulo="O instrutor finalizou a aula">

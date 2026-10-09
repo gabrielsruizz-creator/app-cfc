@@ -54,6 +54,12 @@ export default function ContaAluno() {
           aoPressionar={() => router.push('/evolucao')}
         />
         <Divisor />
+        <ItemLista
+          icone="time"
+          titulo="Extrato de aulas (carga horária)"
+          aoPressionar={() => router.push('/extrato-aulas')}
+        />
+        <Divisor />
         <ItemLista icone="receipt" titulo="Recibos" aoPressionar={() => router.push('/recibos')} />
         <Divisor />
         <ItemLista

@@ -125,6 +125,11 @@ Prazos da fila (lembrete em 48 h e expiração em 5 dias) e demais regras ficam 
 
 As posições do instrutor só são gravadas entre "a caminho" e o check-out e são apagadas depois de 30 dias.
 
+**Carga horária e extrato:** as horas de aula do aluno contam o tempo real de cada aula (do check-in ao check-out),
+limitado à duração agendada. Em **Conta › Extrato de aulas** o aluno vê cada aula concluída (data, horários
+agendado e real, minutos, instrutor, veículo e o que foi trabalhado) e **Exportar PDF** gera o comprovante para
+salvar ou enviar.
+
 ### Roteiro de teste da Fase 4 (integração com o CFC Plus)
 
 Precisa do CFC Plus rodando (repositório `CFC-Plus`, branch com a integração; API em `:3333`). Os dois painéis
@@ -138,7 +143,10 @@ usam a porta 5173: o que subir depois vai sozinho para a 5174.
    "Venda paga · Recebido"; no CFC Plus, **Secretaria › Vendas do app** mostra a venda com os dados do aluno.
 4. **CFC Plus:** **Cadastrar aluno** cria a ficha (origem "App Volante"); **Fazer matrícula** segue o fluxo normal e,
    depois, **Vincular** marca a venda como matriculada.
-5. **Enviar pedidos já recebidos** reenvia as vendas pagas antes da conexão (sem duplicar do outro lado).
+5. **Reenviar vendas e aulas** reenvia as vendas pagas e as aulas concluídas antes da conexão (sem duplicar do outro lado).
+6. **Aula na agenda do CFC Plus:** com o aluno matriculado no CFC Plus e o instrutor cadastrado lá com o **mesmo CPF**,
+   cada aula concluída no app entra sozinha na **Agenda** do CFC Plus como realizada (selo "App Volante"). Se faltar
+   algo, ela aparece em **Secretaria › Aulas do app** com o motivo.
 
 Se o CFC Plus estiver fora do ar, o envio fica "Tentando de novo" e o worker repete com espera crescente.
 Contrato da API em [docs/integracao-cfc-plus.md](docs/integracao-cfc-plus.md).
@@ -183,4 +191,5 @@ com devolução em caso de falha, expurgo de posições).
 - **Fase 3 (entregue):** instrutor a caminho com mapa ao vivo, link para contato de confiança, cupons (pagos pela
   plataforma ou pelo parceiro), relatórios com exportação CSV e cartão de crédito parcelado.
 - **Fase 4 (entregue):** integração opcional, por autoescola, com o ERP CFC Plus: chave gerada no CFC Plus, teste de
-  conexão, envio das vendas (pagas, confirmadas, recusadas, expiradas) com novas tentativas e histórico de envios.
+  conexão, envio das vendas (pagas, confirmadas, recusadas, expiradas) e das aulas concluídas (lançadas na agenda do
+  CFC Plus) com novas tentativas e histórico de envios; carga horária pelo tempo real e extrato de aulas em PDF.

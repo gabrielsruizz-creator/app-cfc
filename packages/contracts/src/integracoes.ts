@@ -56,7 +56,7 @@ export const TIPOS_EVENTO_CFC_PLUS = [
   'pedido.recusado',
   'pedido.expirado',
   'matricula.criada',
-  /** Reenvio do estado atual (botão "Enviar pedidos já recebidos"). */
+  /** Reenvio do estado atual (botão "Reenviar vendas e aulas"). */
   'pedido.sincronizado',
 ] as const;
 
@@ -100,3 +100,35 @@ export const eventoCfcPlus = z.object({
   }),
 });
 export type EventoCfcPlus = z.infer<typeof eventoCfcPlus>;
+
+/** Aula concluída enviada ao CFC Plus, que a lança na agenda como realizada (POST /aulas). */
+export const TIPOS_AULA_CFC_PLUS = ['aula.concluida', 'aula.atualizada'] as const;
+
+export const aulaCfcPlus = z.object({
+  versao: z.literal(1),
+  /** Único por envio: o CFC Plus ignora repetições do mesmo id. */
+  id: z.string().min(1).max(120),
+  tipo: z.enum(TIPOS_AULA_CFC_PLUS),
+  ocorridoEm: z.string(),
+  aula: z.object({
+    id,
+    pedidoId: id,
+    pedidoCodigo: z.string(),
+    categoria: z.string(),
+    /** Horário agendado. */
+    inicio: z.string(),
+    fim: z.string(),
+    checkinEm: z.string().nullable(),
+    checkoutEm: z.string().nullable(),
+    minutosAgendados: z.number().int(),
+    minutosRealizados: z.number().int().nullable(),
+    minutosContados: z.number().int(),
+    instrutor: z.object({ nome: z.string(), cpf: z.string().nullable() }),
+    veiculo: z.object({ placa: z.string(), descricao: z.string() }).nullable(),
+    pontoEncontro: z.string(),
+    habilidades: z.array(z.object({ nome: z.string(), nivel: z.number().int() })),
+    anotacao: z.string().nullable(),
+  }),
+  aluno: z.object({ id, nome: z.string(), cpf: z.string().nullable() }),
+});
+export type AulaCfcPlus = z.infer<typeof aulaCfcPlus>;

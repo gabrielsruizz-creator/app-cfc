@@ -14,4 +14,7 @@ export class CfcPlusNaoConfigurado implements CfcPlusPort {
   enviarEvento() {
     return this.pendente();
   }
+  enviarAula() {
+    return this.pendente();
+  }
 }

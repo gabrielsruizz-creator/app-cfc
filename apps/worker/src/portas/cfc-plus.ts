@@ -1,4 +1,4 @@
-import type { EventoCfcPlus } from '@volante/contracts';
+import type { AulaCfcPlus, EventoCfcPlus } from '@volante/contracts';
 
 /**
  * Porta da integração com o ERP CFC Plus (Fase 4). A integração é por autoescola e opcional:
@@ -25,4 +25,6 @@ export interface CfcPlusPort {
   /** Confere endereço e chave; em sucesso, a resposta traz o nome do CFC no ERP. */
   testar(conexao: ConexaoCfcPlus): Promise<ResultadoCfcPlus>;
   enviarEvento(conexao: ConexaoCfcPlus, evento: EventoCfcPlus): Promise<ResultadoCfcPlus>;
+  /** Aula concluída (ou evolução atualizada) para a agenda do CFC Plus. */
+  enviarAula(conexao: ConexaoCfcPlus, aula: AulaCfcPlus): Promise<ResultadoCfcPlus>;
 }

@@ -59,6 +59,8 @@ export const aulas = pgTable(
     checkoutLocal: geografiaPonto(),
     checkoutConfirmadoEm: instanteTz(),
     checkoutConfirmadoPor: text(),
+    /** Tempo real da aula (check-in → check-out), gravado na conclusão. */
+    minutosRealizados: integer(),
     canceladaEm: instanteTz(),
     canceladaPor: text(),
     motivoCancelamento: text(),

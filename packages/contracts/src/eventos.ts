@@ -38,6 +38,7 @@ export const payloadsEventos = {
   'aula.checkin': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
   'aula.checkout': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
   'aula.concluida': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
+  'aula.evolucao_registrada': z.object({ aulaId: id, alunoId: id, instrutorId: id }),
   'aula.avaliada': z.object({ aulaId: id, instrutorId: id, nota: z.number() }),
   'cobranca.solicitada': z.object({ cobrancaId: id }),
   'cobranca.paga': z.object({ cobrancaId: id, pedidoId: id }),

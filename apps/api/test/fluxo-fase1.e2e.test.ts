@@ -214,6 +214,13 @@ describe('Fase 1 — fluxo completo pela API', () => {
       })
       .expect(200);
 
+    // Simula 47 minutos de aula entre o check-in e o check-out.
+    await comAtor(ctx.banco.db, ATOR_SISTEMA, (tx) =>
+      tx
+        .update(aulas)
+        .set({ checkinEm: new Date(Date.now() - 47 * 60_000) })
+        .where(eq(aulas.id, aulaId)),
+    );
     await ctx
       .http()
       .post(`/instrutor/aulas/${aulaId}/checkout`)
@@ -244,8 +251,26 @@ describe('Fase 1 — fluxo completo pela API', () => {
 
     const evolucao = await ctx.http().get('/aluno/evolucao').set(ha).expect(200);
     expect(evolucao.body.aulasConcluidas).toBe(1);
-    expect(evolucao.body.horasAcumuladasMin).toBe(50);
+    // Carga horária: o tempo real (47 min), limitado aos 50 agendados.
+    expect(evolucao.body.horasAcumuladasMin).toBe(47);
     expect(evolucao.body.habilidades[0].nivelAtual).toBe(3);
+
+    const extrato = await ctx.http().get('/aluno/extrato-aulas').set(ha).expect(200);
+    expect(extrato.body.totais).toEqual({
+      aulas: 1,
+      minutosAgendados: 50,
+      minutosRealizados: 47,
+      minutosContados: 47,
+    });
+    expect(extrato.body.aulas[0]).toMatchObject({
+      aulaId,
+      minutosAgendados: 50,
+      minutosRealizados: 47,
+      minutosContados: 47,
+      anotacao: 'Boa evolução na baliza.',
+      habilidades: [{ nome: habilidades.body[3].nome, nivel: 3 }],
+    });
+    expect(extrato.body.aulas[0].checkinEm).not.toBeNull();
 
     const recibos = await ctx.http().get('/aluno/recibos').set(ha).expect(200);
     expect(recibos.body).toHaveLength(1);

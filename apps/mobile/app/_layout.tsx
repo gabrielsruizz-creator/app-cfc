@@ -40,6 +40,7 @@ function Navegacao() {
           options={{ title: 'Avaliar aula', presentation: 'modal' }}
         />
         <Stack.Screen name="evolucao" options={{ title: 'Minha evolução' }} />
+        <Stack.Screen name="extrato-aulas" options={{ title: 'Extrato de aulas' }} />
         <Stack.Screen name="autoescola/[id]" options={{ title: 'Autoescola' }} />
         <Stack.Screen name="pedido/[id]" options={{ title: 'Pedido' }} />
         <Stack.Screen name="checkout/[pacoteId]" options={{ title: 'Resumo da compra' }} />

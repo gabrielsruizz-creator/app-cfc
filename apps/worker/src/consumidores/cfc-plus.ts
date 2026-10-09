@@ -1,21 +1,28 @@
-import type { EventoCfcPlus, TipoEvento } from '@volante/contracts';
+import type { AulaCfcPlus, EventoCfcPlus, TipoEvento } from '@volante/contracts';
 import {
   alunos,
   and,
+  asc,
   ATOR_SISTEMA,
+  aulaAnotacoes,
+  aulas,
   cobrancas,
   comAtor,
   desc,
   eq,
+  habilidades,
+  instrutores,
   integracoesAutoescola,
   isNotNull,
   matriculas,
   operacoesIntegracao,
   pedidos,
+  registrosEvolucao,
   usuarios,
+  veiculos,
   type Tx,
 } from '@volante/db';
-import { decifrar } from '@volante/dominio';
+import { cargaHoraria, decifrar } from '@volante/dominio';
 import type { Dependencias } from '../dependencias';
 import type { Consumidor, Evento } from '../outbox';
 import type { ConexaoCfcPlus, ResultadoCfcPlus } from '../portas/cfc-plus';
@@ -104,25 +111,90 @@ export async function montarEventoCfcPlus(
   };
 }
 
+/** Envelope (versão 1) de uma aula concluída: horários reais, minutos, instrutor e evolução. */
+export async function montarAulaCfcPlus(
+  tx: Tx,
+  d: { id: string; tipo: AulaCfcPlus['tipo']; ocorridoEm: Date; aulaId: string },
+): Promise<AulaCfcPlus | null> {
+  const [linha] = await tx
+    .select({ aula: aulas, pedidoCodigo: pedidos.codigo, veiculo: veiculos })
+    .from(aulas)
+    .innerJoin(pedidos, eq(pedidos.id, aulas.pedidoId))
+    .leftJoin(veiculos, eq(veiculos.id, aulas.veiculoId))
+    .where(eq(aulas.id, d.aulaId));
+  if (!linha || linha.aula.status !== 'concluida') return null;
+  const a = linha.aula;
+  const [instrutor] = await tx
+    .select({ nome: usuarios.nome, cpf: usuarios.cpf })
+    .from(instrutores)
+    .innerJoin(usuarios, eq(usuarios.id, instrutores.usuarioId))
+    .where(eq(instrutores.id, a.instrutorId));
+  const [aluno] = await tx
+    .select({ nome: usuarios.nome, cpf: usuarios.cpf })
+    .from(alunos)
+    .innerJoin(usuarios, eq(usuarios.id, alunos.usuarioId))
+    .where(eq(alunos.id, a.alunoId));
+  const evolucao = await tx
+    .select({ nome: habilidades.nome, nivel: registrosEvolucao.nivel })
+    .from(registrosEvolucao)
+    .innerJoin(habilidades, eq(habilidades.id, registrosEvolucao.habilidadeId))
+    .where(eq(registrosEvolucao.aulaId, a.id))
+    .orderBy(asc(habilidades.ordem));
+  const [nota] = await tx.select().from(aulaAnotacoes).where(eq(aulaAnotacoes.aulaId, a.id));
+  const c = cargaHoraria(a);
+  const v = linha.veiculo;
+  return {
+    versao: 1,
+    id: d.id,
+    tipo: d.tipo,
+    ocorridoEm: d.ocorridoEm.toISOString(),
+    aula: {
+      id: a.id,
+      pedidoId: a.pedidoId,
+      pedidoCodigo: linha.pedidoCodigo,
+      categoria: a.categoria,
+      inicio: a.inicio.toISOString(),
+      fim: a.fim.toISOString(),
+      checkinEm: a.checkinEm?.toISOString() ?? null,
+      checkoutEm: a.checkoutEm?.toISOString() ?? null,
+      minutosAgendados: c.agendados,
+      minutosRealizados: a.minutosRealizados ?? c.realizados,
+      minutosContados: c.contados,
+      instrutor: { nome: instrutor?.nome ?? 'Instrutor', cpf: instrutor?.cpf ?? null },
+      veiculo: v
+        ? {
+            placa: v.placa,
+            descricao: `${v.marca} ${v.modelo}${v.cor ? ` ${v.cor.toLowerCase()}` : ''}`,
+          }
+        : null,
+      pontoEncontro: a.pontoEncontroEndereco,
+      habilidades: evolucao,
+      anotacao: nota?.texto ?? null,
+    },
+    aluno: { id: a.alunoId, nome: aluno?.nome ?? 'Aluno', cpf: aluno?.cpf ?? null },
+  };
+}
+
 /** Registra a tentativa (em transação própria, para não sumir se o evento for reprocessado). */
 async function registrarOperacao(
   deps: Dependencias,
   d: {
     integracao: Integracao;
     eventoOrigemId: string | null;
-    envio: EventoCfcPlus;
+    envio: EventoCfcPlus | AulaCfcPlus;
     resultado: ResultadoCfcPlus;
   },
 ) {
   const r = d.resultado;
+  const ehAula = 'aula' in d.envio;
   await comAtor(deps.db, ATOR_SISTEMA, async (tx) => {
     await tx.insert(operacoesIntegracao).values({
       autoescolaId: d.integracao.autoescolaId,
       sistema: 'cfc_plus',
       operacao: d.envio.tipo,
       eventoOrigemId: d.eventoOrigemId,
-      tipoRegistro: 'pedido',
-      idInterno: d.envio.pedido.id,
+      tipoRegistro: ehAula ? 'aula' : 'pedido',
+      idInterno: 'aula' in d.envio ? d.envio.aula.id : d.envio.pedido.id,
       requisicao: d.envio,
       resposta: r.status === 'pendente_configuracao' ? null : ((r.resposta ?? null) as never),
       httpStatus: r.status === 'pendente_configuracao' ? null : (r.httpStatus ?? null),
@@ -156,6 +228,18 @@ async function enviar(
   eventoOrigemId: string | null,
 ) {
   const resultado = await deps.cfcPlus.enviarEvento(conexao, envio);
+  await registrarOperacao(deps, { integracao, eventoOrigemId, envio, resultado });
+  return resultado;
+}
+
+async function enviarAula(
+  deps: Dependencias,
+  integracao: Integracao,
+  conexao: ConexaoCfcPlus,
+  envio: AulaCfcPlus,
+  eventoOrigemId: string | null,
+) {
+  const resultado = await deps.cfcPlus.enviarAula(conexao, envio);
   await registrarOperacao(deps, { integracao, eventoOrigemId, envio, resultado });
   return resultado;
 }
@@ -194,6 +278,35 @@ export const integrarCfcPlus: Consumidor = {
     });
     if (!preparo) return;
     const r = await enviar(deps, preparo.integracao, preparo.conexao, preparo.envio, evento.id);
+    if (r.status === 'erro' && r.reprocessar) throw new ErroReprocessavel(r.motivo);
+  },
+};
+
+/**
+ * Aulas concluídas de autoescolas conectadas vão para a agenda do CFC Plus (lançadas como realizadas).
+ * Evolução registrada depois da conclusão reenvia a aula como "aula.atualizada".
+ */
+export const integrarAulasCfcPlus: Consumidor = {
+  nome: 'integracao.cfc_plus.aulas',
+  eventos: ['aula.concluida', 'aula.evolucao_registrada'],
+  async executar(deps, evento) {
+    if (!evento.autoescolaId) return;
+    const preparo = await comAtor(deps.db, ATOR_SISTEMA, async (tx) => {
+      const integracao = await integracaoDe(tx, evento.autoescolaId!);
+      if (integracao?.status !== 'conectada') return null;
+      const conexao = conexaoDe(integracao);
+      if (!conexao) return null;
+      const { aulaId } = evento.payload as { aulaId: string };
+      const envio = await montarAulaCfcPlus(tx, {
+        id: evento.id,
+        tipo: evento.tipo === 'aula.concluida' ? 'aula.concluida' : 'aula.atualizada',
+        ocorridoEm: evento.ocorridoEm,
+        aulaId,
+      });
+      return envio ? { integracao, conexao, envio } : null;
+    });
+    if (!preparo) return;
+    const r = await enviarAula(deps, preparo.integracao, preparo.conexao, preparo.envio, evento.id);
     if (r.status === 'erro' && r.reprocessar) throw new ErroReprocessavel(r.motivo);
   },
 };
@@ -241,7 +354,7 @@ export const testarCfcPlus: Consumidor = {
   },
 };
 
-/** "Enviar pedidos já recebidos": manda o estado atual de cada pedido pago da autoescola. */
+/** "Reenviar vendas e aulas": manda o estado atual de cada pedido pago e cada aula concluída da autoescola. */
 export const sincronizarCfcPlus: Consumidor = {
   nome: 'integracao.cfc_plus.sincronizar',
   eventos: ['integracao.sincronizar'],
@@ -257,7 +370,7 @@ export const sincronizarCfcPlus: Consumidor = {
         .from(pedidos)
         .where(and(eq(pedidos.autoescolaId, autoescolaId), isNotNull(pedidos.pagoEm)))
         .orderBy(pedidos.pagoEm);
-      const envios: EventoCfcPlus[] = [];
+      const envios: (EventoCfcPlus | AulaCfcPlus)[] = [];
       for (const p of lista) {
         const e = await montarEventoCfcPlus(tx, {
           // mesmo id em cada nova tentativa deste evento: o CFC Plus ignora repetições
@@ -268,12 +381,29 @@ export const sincronizarCfcPlus: Consumidor = {
         });
         if (e) envios.push(e);
       }
+      const concluidas = await tx
+        .select({ id: aulas.id })
+        .from(aulas)
+        .where(and(eq(aulas.autoescolaId, autoescolaId), eq(aulas.status, 'concluida')))
+        .orderBy(aulas.inicio);
+      for (const a of concluidas) {
+        const e = await montarAulaCfcPlus(tx, {
+          id: `sync:${evento.id}:${a.id}`,
+          tipo: 'aula.concluida',
+          ocorridoEm: new Date(),
+          aulaId: a.id,
+        });
+        if (e) envios.push(e);
+      }
       return { integracao, conexao, envios };
     });
     if (!preparo) return;
     let passageira: string | null = null;
     for (const envio of preparo.envios) {
-      const r = await enviar(deps, preparo.integracao, preparo.conexao, envio, evento.id);
+      const r =
+        'aula' in envio
+          ? await enviarAula(deps, preparo.integracao, preparo.conexao, envio, evento.id)
+          : await enviar(deps, preparo.integracao, preparo.conexao, envio, evento.id);
       if (r.status === 'erro' && r.credencialInvalida) return;
       if (r.status === 'erro' && r.reprocessar) passageira = r.motivo;
     }

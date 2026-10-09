@@ -19,6 +19,8 @@ const NOMES_OPERACAO: Record<string, string> = {
   'pedido.expirado': 'Pedido expirado',
   'matricula.criada': 'Matrícula criada',
   'pedido.sincronizado': 'Reenvio',
+  'aula.concluida': 'Aula concluída',
+  'aula.atualizada': 'Evolução da aula',
 };
 
 const NOMES_RESULTADO: Record<string, { texto: string; cor: string }> = {
@@ -81,7 +83,8 @@ export function AutoescolaIntegracoes() {
         </div>
         <p className="suave" style={{ margin: 0 }}>
           {i.descricao} Cada venda paga, confirmada, recusada ou expirada no app aparece em{' '}
-          <strong>Vendas do app</strong> no CFC Plus, com os dados do aluno.
+          <strong>Vendas do app</strong> no CFC Plus, com os dados do aluno; cada aula concluída é
+          lançada na agenda do CFC Plus com o horário real e a evolução.
         </p>
 
         {i.status === 'conectada' && (
@@ -171,11 +174,11 @@ export function AutoescolaIntegracoes() {
                 onClick={() =>
                   acao(
                     () => api('/autoescola/integracoes/cfc-plus/sincronizar', { metodo: 'POST' }),
-                    'Enviando os pedidos já pagos para o CFC Plus. Acompanhe abaixo.',
+                    'Reenviando as vendas pagas e as aulas concluídas para o CFC Plus. Acompanhe abaixo.',
                   )
                 }
               >
-                Enviar pedidos já recebidos
+                Reenviar vendas e aulas
               </button>
             )}
             <button

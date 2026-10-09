@@ -23,6 +23,7 @@ import { useEnvioPosicao } from '../../../src/servicos/posicao';
 import { abrirConversa } from '../../../src/servicos/comercial';
 import { obterLocalizacao } from '../../../src/util/dispositivo';
 import { dataHora, formatarCentavos, hora } from '../../../src/util/formatos';
+import { TempoAula } from '../../../src/componentes/TempoAula';
 
 function FormEvolucao({ aula, aoSalvar }: { aula: AulaDetalhe; aoSalvar: () => void }) {
   const habilidades = useQuery({
@@ -290,6 +291,8 @@ export default function AulaInstrutor() {
           />
         </Cartao>
       )}
+      <TempoAula aula={a} />
+
       {a.status === 'aguardando_confirmacao' && (
         <Aviso tipo="info">
           Aguardando o aluno confirmar o fim da aula. Se ele não responder em 24 h, a confirmação é

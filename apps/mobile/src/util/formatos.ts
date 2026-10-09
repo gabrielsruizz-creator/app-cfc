@@ -65,3 +65,9 @@ export const NOMES_STATUS_AULA: Record<string, string> = {
   nao_compareceu_aluno: 'Aluno não compareceu',
   nao_compareceu_instrutor: 'Instrutor não compareceu',
 };
+
+/** 125 → "2h05"; 50 → "50 min". */
+export function duracao(minutos: number) {
+  if (minutos < 60) return `${minutos} min`;
+  return `${Math.floor(minutos / 60)}h${doisDigitos(minutos % 60)}`;
+}

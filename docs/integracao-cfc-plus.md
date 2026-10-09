@@ -10,7 +10,7 @@ para o ERP CFC Plus, onde a secretaria cadastra o aluno (casado pelo CPF) e faz 
 2. No **painel do Volante** (dono ou gerente da autoescola): Integrações › CFC Plus › informe o endereço do
    CFC Plus e a chave › **Conectar e testar**. A chave é guardada cifrada (AES-256-GCM).
 3. O worker do Volante chama `GET /status`; se der certo, a integração fica **Conectada** e mostra o nome do CFC.
-4. Opcional: **Enviar pedidos já recebidos** reenvia o estado atual de todas as vendas pagas.
+4. Opcional: **Reenviar vendas e aulas** reenvia o estado atual de todas as vendas pagas e das aulas concluídas.
 
 ## API do CFC Plus usada pelo Volante
 
@@ -21,8 +21,9 @@ Chamadas servidor a servidor (sem cookie e sem cabeçalho `Origin`).
 | ---------------- | -------------------------------------------------------------------------------------- |
 | `GET /status`    | `200 { "ok": true, "versao": 1, "cfc": { "nome": "Auto Escola Albatroz" } }`           |
 | `POST /eventos`  | `200 { "recebido": true, "vendaId": "…", "duplicado": false }` (idempotente pelo `id`) |
+| `POST /aulas`    | `200 { "recebido": true, "aulaAppId": "…", "situacao": "lancada" \| "pendente", … }`   |
 
-Erros: `401` chave inválida ou revogada · `400` corpo inválido · `5xx` falha passageira (o Volante tenta de
+Erros: `401` chave inválida ou revogada · `404` em `/aulas` = CFC Plus ainda sem esta rota (o Volante tenta de novo, sem derrubar a conexão) · `400` corpo inválido · `5xx` falha passageira (o Volante tenta de
 novo com espera exponencial, até 10 vezes). `409` é tratado como "já recebido".
 
 ## Evento (corpo do `POST /eventos`)
@@ -72,6 +73,40 @@ novo com espera exponencial, até 10 vezes). `409` é tratado como "já recebido
 - `valorPagoCentavos` foi pago **pelo app** (Pix ou cartão); o app repassa à autoescola o `valorLiquidoCentavos`
   quando ela confirma a matrícula. No CFC Plus, a tela da venda mostra os dois valores e lembra a secretaria de
   registrar as parcelas da matrícula como já recebidas (não há lançamento automático no financeiro do CFC Plus).
+
+## Aula concluída (corpo do `POST /aulas`)
+
+Enviada quando uma aula de autoescola conectada é concluída (`aula.concluida`) e de novo quando o instrutor registra
+evolução depois disso (`aula.atualizada`). O CFC Plus lança a aula na agenda como realizada (casando aluno,
+matrícula, instrutor pelo CPF e veículo pela placa) ou a deixa pendente em **Aulas do app**.
+
+```json
+{
+  "versao": 1,
+  "id": "0199…",
+  "tipo": "aula.concluida", // aula.concluida | aula.atualizada
+  "ocorridoEm": "2026-10-09T12:52:00.000Z",
+  "aula": {
+    "id": "…",
+    "pedidoId": "…",
+    "pedidoCodigo": "PD-KPTFL5",
+    "categoria": "B",
+    "inicio": "2026-10-09T12:00:00.000Z", // horário agendado
+    "fim": "2026-10-09T12:50:00.000Z",
+    "checkinEm": "2026-10-09T12:02:00.000Z", // horários reais
+    "checkoutEm": "2026-10-09T12:49:00.000Z",
+    "minutosAgendados": 50,
+    "minutosRealizados": 47,
+    "minutosContados": 47, // realizado, limitado ao agendado
+    "instrutor": { "nome": "Rafael Souza", "cpf": "83993418433" },
+    "veiculo": { "placa": "ABC1D23", "descricao": "Fiat Argo branco" },
+    "pontoEncontro": "Av. Paulista, 1000",
+    "habilidades": [{ "nome": "Baliza", "nivel": 3 }],
+    "anotacao": "Melhorou a baliza."
+  },
+  "aluno": { "id": "…", "nome": "Lucas Pereira", "cpf": "52998224725" }
+}
+```
 
 ## Onde está no código
 
