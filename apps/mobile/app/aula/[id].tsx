@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
+import { CodigoCheckin } from '../../src/componentes/CodigoCheckin';
 import { CompartilharAula, MapaAoVivo } from '../../src/componentes/Rastreamento';
 import { StatusAula } from '../../src/componentes/StatusAula';
 import {
@@ -111,23 +112,7 @@ export default function AulaAluno() {
       )}
 
       {['confirmada', 'a_caminho'].includes(a.status) && a.codigoCheckin && (
-        <Cartao
-          style={{
-            alignItems: 'center',
-            backgroundColor: cores.primariaSuave,
-            borderColor: cores.primaria,
-          }}
-        >
-          <Texto tipo="rotulo">Código de check-in</Texto>
-          <Texto
-            style={{ fontSize: 44, fontWeight: '800', letterSpacing: 12, color: cores.primaria }}
-          >
-            {a.codigoCheckin}
-          </Texto>
-          <Texto tipo="pequeno" centro>
-            Mostre este código ao instrutor no início da aula. Não compartilhe antes do encontro.
-          </Texto>
-        </Cartao>
+        <CodigoCheckin codigo={a.codigoCheckin} />
       )}
 
       {(a.status === 'a_caminho' || a.status === 'em_andamento') && <MapaAoVivo aulaId={a.id} />}
