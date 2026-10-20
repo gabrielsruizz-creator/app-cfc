@@ -35,6 +35,8 @@ e um serviço que roda a API, o worker e o painel web (em `/painel`).
    EXPO_PUBLIC_API_URL=https://SEU-ENDERECO.onrender.com
    ```
    e rode `pnpm install` e `pnpm dev:mobile`. Leia o QR Code com o Expo Go (celular e computador no mesmo Wi-Fi).
+   No Windows, o atalho **`app-render.bat`** faz isso sozinho: pede o endereço do Render na primeira vez, baixa as
+   atualizações, instala, acorda o servidor e mostra o QR Code (não precisa de Docker).
 
 Limitações do plano gratuito: a API "dorme" após 15 min sem uso (o primeiro acesso demora ~1 min), o banco
 gratuito expira em 30 dias e fotos/documentos enviados somem quando o serviço reinicia.
