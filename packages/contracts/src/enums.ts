@@ -164,6 +164,8 @@ export const TIPOS_DOCUMENTO_LEGAL = [
   'politica_privacidade',
   'termo_instrutor',
   'termo_autoescola',
+  /** Modelo do contrato de prestação de serviços entre aluno e instrutor/autoescola. */
+  'contrato_prestacao',
 ] as const;
 export const tipoDocumentoLegal = z.enum(TIPOS_DOCUMENTO_LEGAL);
 export type TipoDocumentoLegal = z.infer<typeof tipoDocumentoLegal>;

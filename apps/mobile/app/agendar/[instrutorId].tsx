@@ -1,11 +1,12 @@
 import type {
   AulaDetalhe,
+  CategoriaCnh,
   ConfiguracoesPublicas,
   CupomValidado,
   HorarioLivre,
   PerfilInstrutorPublico,
 } from '@volante/contracts';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -34,6 +35,7 @@ import {
   type Ponto,
 } from '../../src/util/dispositivo';
 import { dataCurta, formatarCentavos, hora, partesData } from '../../src/util/formatos';
+import { AceiteContrato, contratoAlterado } from '../../src/componentes/Contrato';
 
 type Passo = 'quando' | 'onde' | 'resumo';
 
@@ -58,6 +60,8 @@ export default function Agendar() {
   const [codigoCupom, setCodigoCupom] = useState('');
   const [cupom, setCupom] = useState<CupomValidado | null>(null);
   const [erroCupom, setErroCupom] = useState<string | null>(null);
+  const [aceite, setAceite] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const chaveIdempotencia = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const mapa = useRef<MapView>(null);
 
@@ -164,12 +168,15 @@ export default function Agendar() {
           pontoEncontroEndereco: endereco || 'Ponto marcado no mapa',
           pontoEncontroReferencia: referencia || undefined,
           cupom: cupom?.codigo,
+          aceiteContrato: aceite ? { hash: aceite } : undefined,
         },
         cabecalhos: { 'idempotency-key': chaveIdempotencia.current },
       });
       router.replace(`/pagamento/${aula.id}`);
     } catch (e) {
       setErro(mensagemDeErro(e));
+      if (contratoAlterado(e))
+        await queryClient.invalidateQueries({ queryKey: ['contrato-previa'] });
       if ((e as { codigo?: string }).codigo === 'horario_indisponivel') {
         setHorario(null);
         setPasso('quando');
@@ -449,10 +456,26 @@ export default function Agendar() {
           {`Cancelamento grátis até ${cfg.cancelamentoGratisAteHoras} horas antes da aula. Depois disso, há multa de ${cfg.cancelamentoMultaBp / 100}% do valor. Se o instrutor não aceitar ou cancelar, você recebe tudo de volta.`}
         </Aviso>
       )}
+      {!credito && horario && ponto && categoria && (
+        <AceiteContrato
+          dados={{
+            tipo: 'aula_avulsa',
+            instrutorId,
+            inicio: horario.inicio,
+            categoria: categoria as CategoriaCnh,
+            pontoEncontro: ponto,
+            pontoEncontroEndereco: endereco || 'Ponto marcado no mapa',
+            pontoEncontroReferencia: referencia || undefined,
+            cupom: cupom?.codigo,
+          }}
+          aoMudar={setAceite}
+        />
+      )}
       <Botao
         titulo={credito ? 'Solicitar aula' : 'Ir para o pagamento'}
         icone={credito ? 'checkmark' : 'qr-code'}
         carregando={enviando}
+        desabilitado={!credito && !aceite}
         aoPressionar={confirmar}
       />
       <Botao titulo="Voltar" variante="texto" aoPressionar={() => setPasso('onde')} />

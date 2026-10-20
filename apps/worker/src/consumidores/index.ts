@@ -5,6 +5,7 @@ import {
   sincronizarCfcPlus,
   testarCfcPlus,
 } from './cfc-plus';
+import { enviarContrato } from './contratos';
 import { notificar } from './notificacoes';
 import { CONSUMIDORES_PAGAMENTO } from './pagamentos';
 
@@ -15,4 +16,5 @@ export const CONSUMIDORES: Consumidor[] = [
   integrarAulasCfcPlus,
   testarCfcPlus,
   sincronizarCfcPlus,
+  enviarContrato,
 ];

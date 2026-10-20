@@ -26,4 +26,5 @@ export {
 } from 'drizzle-orm';
 export * from './teste';
 export * from './semente';
+export * from './modelo-contrato';
 export * from './fabricas';

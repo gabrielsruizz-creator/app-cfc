@@ -11,6 +11,7 @@ import {
   instrutorAprovado,
   pagar,
   type Contexto,
+  comContrato,
 } from './apoio';
 
 let ctx: Contexto;
@@ -84,14 +85,16 @@ describe('Fase 3 — cupons, cartão, rastreamento e relatórios', () => {
       .post('/aluno/aulas')
       .set(hal)
       .set('idempotency-key', 'aula-cupom')
-      .send({
-        instrutorId: instrutor.instrutorId,
-        inicio: horario(3, 9),
-        categoria: 'B',
-        pontoEncontro: BASE,
-        pontoEncontroEndereco: 'Av. Paulista, 1000',
-        cupom: 'boasvindas',
-      })
+      .send(
+        await comContrato(ctx, hal, 'aula_avulsa', {
+          instrutorId: instrutor.instrutorId,
+          inicio: horario(3, 9),
+          categoria: 'B',
+          pontoEncontro: BASE,
+          pontoEncontroEndereco: 'Av. Paulista, 1000',
+          cupom: 'boasvindas',
+        }),
+      )
       .expect(201);
     expect(aula.body.cobranca.valorCentavos).toBe(8000);
     const lista = await ctx.http().get('/admin/cupons').set(ha).expect(200);
@@ -166,14 +169,21 @@ describe('Fase 3 — cupons, cartão, rastreamento e relatórios', () => {
       .post('/aluno/pedidos')
       .set(hal)
       .set('idempotency-key', 'cartao-7x')
-      .send({ pacoteId, metodo: 'cartao', parcelas: 7 })
+      .send(await comContrato(ctx, hal, 'pacote', { pacoteId, metodo: 'cartao', parcelas: 7 }))
       .expect(422);
     const pedido = await ctx
       .http()
       .post('/aluno/pedidos')
       .set(hal)
       .set('idempotency-key', 'cartao-6x')
-      .send({ pacoteId, metodo: 'cartao', parcelas: 6, cupom: 'auto10' })
+      .send(
+        await comContrato(ctx, hal, 'pacote', {
+          pacoteId,
+          metodo: 'cartao',
+          parcelas: 6,
+          cupom: 'auto10',
+        }),
+      )
       .expect(201);
     expect(pedido.body).toMatchObject({
       valorBrutoCentavos: 100000,
@@ -235,13 +245,15 @@ describe('Fase 3 — cupons, cartão, rastreamento e relatórios', () => {
       .post('/aluno/aulas')
       .set(hal)
       .set('idempotency-key', 'aula-rastreio')
-      .send({
-        instrutorId: instrutor.instrutorId,
-        inicio: horario(4, 15),
-        categoria: 'B',
-        pontoEncontro: BASE,
-        pontoEncontroEndereco: 'Av. Paulista, 1000',
-      })
+      .send(
+        await comContrato(ctx, hal, 'aula_avulsa', {
+          instrutorId: instrutor.instrutorId,
+          inicio: horario(4, 15),
+          categoria: 'B',
+          pontoEncontro: BASE,
+          pontoEncontroEndereco: 'Av. Paulista, 1000',
+        }),
+      )
       .expect(201);
     const aulaId = criada.body.id as string;
     await pagar(ctx, criada.body.cobranca.id);

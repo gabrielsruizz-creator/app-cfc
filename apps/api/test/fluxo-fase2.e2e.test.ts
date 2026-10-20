@@ -12,6 +12,7 @@ import {
   instrutorAprovado,
   pagar,
   type Contexto,
+  comContrato,
 } from './apoio';
 
 let ctx: Contexto;
@@ -111,14 +112,14 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
       .post('/aluno/pedidos')
       .set(ha)
       .set('idempotency-key', 'pedido-1')
-      .send({ pacoteId })
+      .send(await comContrato(ctx, ha, 'pacote', { pacoteId }))
       .expect(201);
     const repetido = await ctx
       .http()
       .post('/aluno/pedidos')
       .set(ha)
       .set('idempotency-key', 'pedido-1')
-      .send({ pacoteId })
+      .send(await comContrato(ctx, ha, 'pacote', { pacoteId }))
       .expect(201);
     expect(repetido.body.id).toBe(pedido.body.id);
     expect(pedido.body.status).toBe('aguardando_pagamento');
@@ -205,7 +206,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
       .post('/aluno/pedidos')
       .set(ha)
       .set('idempotency-key', 'pedido-recusa')
-      .send({ pacoteId: perfil.body.pacotes[0].id })
+      .send(await comContrato(ctx, ha, 'pacote', { pacoteId: perfil.body.pacotes[0].id }))
       .expect(201);
     await pagar(ctx, pedido.body.cobranca.id);
     await ctx
@@ -229,7 +230,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
       .post('/aluno/pedidos')
       .set(ha)
       .set('idempotency-key', 'pedido-desistencia')
-      .send({ pacoteId: perfil.body.pacotes[0].id })
+      .send(await comContrato(ctx, ha, 'pacote', { pacoteId: perfil.body.pacotes[0].id }))
       .expect(201);
     const cancelado = await ctx
       .http()
@@ -320,7 +321,7 @@ describe('Fase 2 — autoescola, pacotes, chat, financeiro e moderação', () =>
       .post('/aluno/pedidos')
       .set(ha)
       .set('idempotency-key', 'pedido-instrutor')
-      .send({ pacoteId })
+      .send(await comContrato(ctx, ha, 'pacote', { pacoteId }))
       .expect(201);
     await pagar(ctx, pedido.body.cobranca.id);
     const creditos = await ctx.http().get('/aluno/creditos').set(ha).expect(200);

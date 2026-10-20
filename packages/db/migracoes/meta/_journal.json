@@ -57,6 +57,13 @@
       "when": 1791506425035,
       "tag": "0007_carga_horaria",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792521077930,
+      "tag": "0008_contratos",
+      "breakpoints": true
     }
   ]
 }

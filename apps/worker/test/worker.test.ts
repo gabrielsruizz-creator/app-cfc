@@ -27,6 +27,7 @@ import { GatewayNaoConfigurado } from '../src/adaptadores/gateway-nao-configurad
 import { GatewaySimulado } from '../src/adaptadores/gateway-simulado';
 import { PushNaoConfigurado } from '../src/adaptadores/push';
 import { CONSUMIDORES } from '../src/consumidores';
+import { EmailNaoConfigurado } from '../src/adaptadores/email';
 import { logSilencioso, type Dependencias } from '../src/dependencias';
 import { processarTudo, type Consumidor } from '../src/outbox';
 import { expirarSolicitacoesSemResposta, verificarDocumentos } from '../src/rotinas';
@@ -42,6 +43,7 @@ beforeAll(async () => {
     gateways: { simulado: new GatewaySimulado(), nao_configurado: new GatewayNaoConfigurado() },
     push: new PushNaoConfigurado(),
     cfcPlus: new CfcPlusNaoConfigurado(),
+    email: new EmailNaoConfigurado(),
     log: logSilencioso,
   };
 });

@@ -153,6 +153,22 @@ usam a porta 5173: o que subir depois vai sozinho para a 5174.
 Se o CFC Plus estiver fora do ar, o envio fica "Tentando de novo" e o worker repete com espera crescente.
 Contrato da API em [docs/integracao-cfc-plus.md](docs/integracao-cfc-plus.md).
 
+### Contrato de prestação de serviços
+
+Toda compra (pacote ou aula avulsa) gera um contrato entre o aluno e o instrutor ou a autoescola, a partir do modelo
+vigente (**Admin › Documentos legais**, tipo "contrato_prestacao"; o modelo-base é provisório e deve ser revisado por
+advogado).
+
+- **Texto exato:** antes de pagar, o app mostra o contrato já preenchido com os dados daquela compra e pede
+  "Li e aceito". O servidor só aceita a compra se a impressão digital (SHA-256) do texto lido for igual à do contrato
+  gerado; o texto fica gravado e não pode ser alterado depois.
+- **Duas partes:** o aceite do aluno fica registrado com data, hora, IP e aparelho; o do instrutor/autoescola é a
+  adesão pela oferta publicada, junto com o Termo de parceiro que ele aceitou.
+- **Cópias por e-mail:** quando o pagamento é confirmado, cada parte recebe o contrato em PDF, com o registro dos
+  aceites. Para enviar de verdade, configure `EMAIL_SMTP_URL` no worker (ex.: SMTP do Gmail com senha de app); sem
+  isso, o envio fica "aguardando configuração". Qualquer parte vê o contrato e pede nova cópia: no app (**Ver
+  contrato** no pedido ou na aula) e no painel da autoescola (**Novos alunos › Ver contrato**).
+
 ### Pagamento em modo de teste
 
 Com `PAGAMENTO_GATEWAY=simulado` (já é o valor do `.env.exemplo`), o Pix gerado é fictício. Na tela de pagamento do app aparece

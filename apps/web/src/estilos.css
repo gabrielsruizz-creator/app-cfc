@@ -652,3 +652,51 @@ a.indicador:hover {
   color: var(--texto-suave);
   margin-top: 2px;
 }
+
+/* Janela sobre a página (contrato do pedido) */
+.janela {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--fundo);
+  color: var(--texto);
+  padding: 20px;
+  width: min(780px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+.janela::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.contrato-texto {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 20px 24px;
+  line-height: 1.6;
+}
+.contrato-texto h2 {
+  font-size: 1.25rem;
+  margin: 0 0 12px;
+}
+.contrato-texto h3 {
+  font-size: 1rem;
+  margin: 18px 0 6px;
+}
+.contrato-texto p {
+  margin: 0 0 8px;
+  text-align: justify;
+}
+@media print {
+  body > *:not(dialog) {
+    display: none;
+  }
+  .janela {
+    position: static;
+    max-height: none;
+    border: 0;
+    width: auto;
+  }
+  .janela button {
+    display: none;
+  }
+}

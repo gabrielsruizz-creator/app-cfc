@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Req,
 } from '@nestjs/common';
 import {
   agendarComCredito,
@@ -19,6 +20,7 @@ import {
   type PacoteEntrada,
 } from '@volante/contracts';
 import { ErroDominio } from '@volante/dominio';
+import type { Request } from 'express';
 import {
   atorAluno,
   atorAutoescola,
@@ -129,9 +131,13 @@ export class ComercialController {
   comprar(
     @SessaoAtual() s: Sessao,
     @Body(new ZodPipe(comprarPacote)) d: ComprarPacote,
+    @Req() req: Request,
     @Headers('idempotency-key') chave?: string,
   ) {
-    return this.servico.comprar(atorAluno(s), d, exigirChave(chave));
+    return this.servico.comprar(atorAluno(s), d, exigirChave(chave), {
+      ip: req.ip ?? null,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
   }
 
   @Get('aluno/pedidos')

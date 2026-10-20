@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
 } from '@nestjs/common';
 import {
   avaliarAula,
@@ -20,6 +21,7 @@ import {
   type SolicitarAula,
 } from '@volante/contracts';
 import { ErroDominio } from '@volante/dominio';
+import type { Request } from 'express';
 import { atorAluno, SessaoAtual, type Sessao } from '../../nucleo/auth/sessao';
 import { ZodPipe } from '../../nucleo/zod.pipe';
 import { AlunosService } from './alunos.service';
@@ -54,6 +56,7 @@ export class AlunoController {
   async solicitar(
     @SessaoAtual() s: Sessao,
     @Body(new ZodPipe(solicitarAula)) dados: SolicitarAula,
+    @Req() req: Request,
     @Headers('idempotency-key') chave: string | undefined,
   ) {
     if (!chave || chave.length < 8) {
@@ -64,7 +67,10 @@ export class AlunoController {
       );
     }
     const ator = atorAluno(s);
-    const aulaId = await this.aulas.solicitar(ator, dados, chave);
+    const aulaId = await this.aulas.solicitar(ator, dados, chave, {
+      ip: req.ip ?? null,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
     return this.consulta.detalhe(ator, aulaId);
   }
 

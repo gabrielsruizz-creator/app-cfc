@@ -1,5 +1,5 @@
 import type { CupomValidado, Pacote, ResumoPedido } from '@volante/contracts';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -18,6 +18,7 @@ import {
 import { api, mensagemDeErro } from '../../src/servicos/api';
 import { useTema } from '../../src/tema/TemaProvider';
 import { formatarCentavos } from '../../src/util/formatos';
+import { AceiteContrato, contratoAlterado } from '../../src/componentes/Contrato';
 
 /** Resumo da compra de um pacote: cupom, Pix ou cartão parcelado. */
 export default function Checkout() {
@@ -31,6 +32,8 @@ export default function Checkout() {
   const [parcelas, setParcelas] = useState(1);
   const [erro, setErro] = useState<string | null>(null);
   const [comprando, setComprando] = useState(false);
+  const [aceite, setAceite] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const chave = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const q = useQuery({
     queryKey: ['pacote', pacoteId],
@@ -70,12 +73,15 @@ export default function Checkout() {
           cupom: cupom?.codigo,
           metodo,
           parcelas: metodo === 'cartao' ? parcelasValidas : 1,
+          aceiteContrato: { hash: aceite },
         },
         cabecalhos: { 'idempotency-key': chave.current },
       });
       router.replace(`/pedido/${pedido.id}`);
     } catch (e) {
       setErro(mensagemDeErro(e));
+      if (contratoAlterado(e))
+        await queryClient.invalidateQueries({ queryKey: ['contrato-previa'] });
       chave.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     } finally {
       setComprando(false);
@@ -206,12 +212,29 @@ export default function Checkout() {
         </Texto>
       </Cartao>
 
+      <AceiteContrato
+        dados={{
+          tipo: 'pacote',
+          pacoteId,
+          cupom: cupom?.codigo,
+          metodo,
+          parcelas: metodo === 'cartao' ? parcelasValidas : 1,
+        }}
+        aoMudar={setAceite}
+      />
+
       <Botao
         titulo={metodo === 'pix' ? 'Pagar com Pix' : 'Pagar com cartão'}
         icone={metodo === 'pix' ? 'qr-code' : 'card'}
         carregando={comprando}
+        desabilitado={!aceite}
         aoPressionar={comprar}
       />
+      {!aceite && (
+        <Texto tipo="pequeno" centro>
+          Para pagar, leia e aceite o contrato acima.
+        </Texto>
+      )}
     </Tela>
   );
 }

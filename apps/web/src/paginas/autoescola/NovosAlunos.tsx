@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, dataHora, mensagem, reais } from '../../api';
 import { Abas, Aviso, Carregando, Status } from '../../componentes/comum';
+import { JanelaContrato } from '../../componentes/Contrato';
 
 type Aba = 'novo' | 'em_contato' | 'confirmado' | 'recusado';
 
@@ -27,6 +28,7 @@ export function AutoescolaNovosAlunos() {
   const [aba, setAba] = useState<Aba>('novo');
   const [erro, setErro] = useState<string | null>(null);
   const [recusando, setRecusando] = useState<string | null>(null);
+  const [contrato, setContrato] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
   const todos = useQuery({
     queryKey: ['autoescola', 'fila'],
@@ -121,6 +123,13 @@ export function AutoescolaNovosAlunos() {
               </div>
             </div>
             {i.motivoRecusa && <Aviso tipo="erro">Motivo da recusa: {i.motivoRecusa}</Aviso>}
+            {!aberto && (
+              <div className="linha">
+                <button className="botao texto" onClick={() => setContrato(i.pedidoId)}>
+                  Ver contrato
+                </button>
+              </div>
+            )}
             {aberto && (
               <div className="linha">
                 <a
@@ -153,6 +162,9 @@ export function AutoescolaNovosAlunos() {
                 </button>
                 <button className="botao perigo" onClick={() => setRecusando(i.pedidoId)}>
                   Recusar
+                </button>
+                <button className="botao texto" onClick={() => setContrato(i.pedidoId)}>
+                  Ver contrato
                 </button>
               </div>
             )}
@@ -190,6 +202,7 @@ export function AutoescolaNovosAlunos() {
           </div>
         );
       })}
+      {contrato && <JanelaContrato pedidoId={contrato} aoFechar={() => setContrato(null)} />}
     </div>
   );
 }

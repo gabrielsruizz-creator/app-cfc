@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
+  ComprarPacote,
   AgendarComCredito,
   Pacote,
   PacoteEntrada,
@@ -182,8 +183,9 @@ export class ComercialService {
 
   async comprar(
     ator: Ator & { alunoId: string },
-    d: { pacoteId: string; cupom?: string; metodo: 'pix' | 'cartao'; parcelas: number },
+    d: ComprarPacote,
     chave: string,
+    origem: { ip: string | null; userAgent: string | null } = { ip: null, userAgent: null },
   ) {
     const chaveIdempotencia = `${ator.alunoId}:${chave}`;
     const pedidoId = await this.banco.comAtor(ator, async (tx) => {
@@ -200,6 +202,7 @@ export class ComercialService {
         parcelas: d.parcelas,
         gateway: this.config.PAGAMENTO_GATEWAY,
         chaveIdempotencia,
+        aceiteContrato: { hash: d.aceiteContrato.hash, usuarioId: ator.usuarioId, ...origem },
       });
       return r.pedido.id;
     });

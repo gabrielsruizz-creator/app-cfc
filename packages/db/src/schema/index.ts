@@ -7,3 +7,4 @@ export * from './nucleo';
 export * from './comunicacao';
 export * from './moderacao';
 export * from './promocoes';
+export * from './contratos';

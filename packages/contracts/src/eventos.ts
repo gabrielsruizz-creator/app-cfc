@@ -68,6 +68,8 @@ export const payloadsEventos = {
   // Fase 4: integração com o CFC Plus
   'integracao.testar': z.object({ autoescolaId: id }),
   'integracao.sincronizar': z.object({ autoescolaId: id }),
+  /** Pedido de nova cópia do contrato por e-mail (parte que pediu). */
+  'contrato.reenviar': z.object({ contratoId: id, parte: z.enum(['contratante', 'contratado']) }),
 } as const;
 
 export type TipoEvento = keyof typeof payloadsEventos;

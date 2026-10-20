@@ -241,6 +241,12 @@ export default function AulaAluno() {
           aoPressionar={() => abrirConversa({ instrutorId: a.instrutor.id })}
         />
         <Botao
+          titulo="Contrato"
+          icone="document-text"
+          variante="texto"
+          aoPressionar={() => router.push(`/contrato/${a.pedidoId}`)}
+        />
+        <Botao
           titulo="Denunciar"
           icone="flag"
           variante="texto"

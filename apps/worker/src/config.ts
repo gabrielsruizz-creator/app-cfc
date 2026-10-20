@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CfcPlusHttp } from './adaptadores/cfc-plus-http';
 import { CfcPlusNaoConfigurado } from './adaptadores/cfc-plus-nao-configurado';
+import { EmailNaoConfigurado, EmailSmtp } from './adaptadores/email';
 import { GatewayAsaas } from './adaptadores/gateway-asaas';
 import { GatewayNaoConfigurado } from './adaptadores/gateway-nao-configurado';
 import { GatewaySimulado } from './adaptadores/gateway-simulado';
@@ -19,6 +20,9 @@ const esquema = z.object({
   INTERVALO_ROTINAS_SEG: z.coerce.number().default(60),
   /** desligado: nada é enviado ao CFC Plus (fica pendente de configuração). */
   CFC_PLUS: z.enum(['ligado', 'desligado']).default('ligado'),
+  /** SMTP para enviar as cópias dos contratos (ex.: smtps://usuario:senha@smtp.gmail.com:465). Vazio = pendente. */
+  EMAIL_SMTP_URL: z.string().optional(),
+  EMAIL_REMETENTE: z.string().default('Volante <nao-responda@volante.app>'),
 });
 
 export type ConfigWorker = z.infer<typeof esquema>;
@@ -43,6 +47,9 @@ export function montarDependencias(db: Db, config: ConfigWorker): Dependencias {
         ? new PushExpo(config.EXPO_ACCESS_TOKEN)
         : new PushNaoConfigurado(),
     cfcPlus: config.CFC_PLUS === 'ligado' ? new CfcPlusHttp() : new CfcPlusNaoConfigurado(),
+    email: config.EMAIL_SMTP_URL
+      ? new EmailSmtp(config.EMAIL_SMTP_URL, config.EMAIL_REMETENTE)
+      : new EmailNaoConfigurado(),
     log: logConsole,
   };
 }

@@ -43,7 +43,8 @@ export async function iniciarApp(): Promise<Contexto> {
     .compile();
   const app = modulo.createNestApplication({ bodyParser: false });
   configurarApp(app);
-  await app.init();
+  // Servidor já escutando: requisições podem se intercalar (ex.: prévia do contrato dentro de outra).
+  await app.listen(0, '127.0.0.1');
   return { app, banco, http: () => request(app.getHttpServer()) };
 }
 
@@ -276,4 +277,22 @@ export async function autoescolaAprovada(ctx: Contexto, nome: string) {
   );
   const h = { ...auth(dono.token), 'x-autoescola-id': autoescolaId };
   return { ...dono, autoescolaId, h };
+}
+
+/**
+ * Corpo da compra com o aceite do contrato, como o app faz: pede a prévia e envia o hash do texto.
+ * Se a prévia falhar (ex.: horário ocupado), manda um hash qualquer para a compra falhar pelo mesmo motivo.
+ */
+export async function comContrato<T extends object>(
+  ctx: Contexto,
+  h: Record<string, string>,
+  tipo: 'pacote' | 'aula_avulsa',
+  corpo: T,
+): Promise<T & { aceiteContrato: { hash: string } }> {
+  const r = await ctx
+    .http()
+    .post('/aluno/contratos/previa')
+    .set(h)
+    .send({ tipo, ...corpo });
+  return { ...corpo, aceiteContrato: { hash: r.status === 200 ? r.body.hash : '0'.repeat(64) } };
 }

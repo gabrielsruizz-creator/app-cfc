@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { aceiteContrato } from './contratos';
 import { id, instante, pontoGeo } from './comum';
 import { categoriaCnh, statusAula, statusCobranca } from './enums';
 
@@ -13,6 +14,8 @@ export const solicitarAula = z.object({
   creditoId: id.optional(),
   /** Código de cupom de desconto (Fase 3). */
   cupom: z.string().trim().max(30).optional(),
+  /** Aceite do contrato (obrigatório na aula avulsa; com saldo de pacote vale o contrato do pacote). */
+  aceiteContrato: aceiteContrato.optional(),
 });
 export type SolicitarAula = z.infer<typeof solicitarAula>;
 

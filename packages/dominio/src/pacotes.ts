@@ -18,6 +18,7 @@ import {
   type Tx,
 } from '@volante/db';
 import { gerarCodigoPedido } from './codigos';
+import { registrarContrato, type AceiteNaCompra } from './contratos';
 import { ErroDominio, naoEncontrado } from './erros';
 import {
   reservarUsoCupom,
@@ -63,6 +64,8 @@ export async function comprarPacote(
     /** Pix (padrão) ou cartão de crédito, com até `parcelasMax` parcelas do pacote. */
     metodo?: 'pix' | 'cartao';
     parcelas?: number;
+    /** Aceite do contrato pelo aluno (hash do texto da prévia, IP e aparelho). */
+    aceiteContrato?: AceiteNaCompra;
     agora?: Date;
   },
 ) {
@@ -174,6 +177,7 @@ export async function comprarPacote(
     })
     .returning();
 
+  await registrarContrato(tx, pedido!.id, d.aceiteContrato);
   await publicarEvento(tx, {
     tipo: 'pedido.criado',
     agregadoTipo: 'pedido',

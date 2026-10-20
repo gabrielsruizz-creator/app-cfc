@@ -53,6 +53,7 @@ export class AulasService {
     ator: Ator & { alunoId: string },
     dados: SolicitarAula,
     chaveIdempotencia: string,
+    origem: { ip: string | null; userAgent: string | null } = { ip: null, userAgent: null },
   ) {
     if (dados.creditoId) {
       throw new ErroDominio(
@@ -60,6 +61,13 @@ export class AulasService {
         'Agendamento com saldo de pacote chega na próxima versão',
       );
     }
+    if (!dados.aceiteContrato) {
+      throw new ErroDominio(
+        'contrato_obrigatorio',
+        'Leia e aceite o contrato de prestação de serviços para continuar',
+      );
+    }
+    const aceiteContrato = dados.aceiteContrato;
     const chave = `${ator.alunoId}:${chaveIdempotencia}`;
     return this.banco.comAtor(ator, async (tx) => {
       const [existente] = await tx
@@ -84,6 +92,7 @@ export class AulasService {
         gateway: this.config.PAGAMENTO_GATEWAY,
         chaveIdempotencia: chave,
         cupom: dados.cupom || null,
+        aceiteContrato: { hash: aceiteContrato.hash, usuarioId: ator.usuarioId, ...origem },
       });
       return r.aula.id;
     });

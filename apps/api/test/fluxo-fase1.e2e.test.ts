@@ -19,6 +19,7 @@ import {
   iniciarApp,
   instrutorAprovado,
   type Contexto,
+  comContrato,
 } from './apoio';
 
 let ctx: Contexto;
@@ -119,13 +120,18 @@ describe('Fase 1 — fluxo completo pela API', () => {
       pontoEncontro: { lat: -23.56, lng: -46.65 },
       pontoEncontroEndereco: 'Av. Paulista, 1000',
     };
-    await ctx.http().post('/aluno/aulas').set(ha).send(pedido).expect(400); // sem Idempotency-Key
+    await ctx
+      .http()
+      .post('/aluno/aulas')
+      .set(ha)
+      .send(await comContrato(ctx, ha, 'aula_avulsa', pedido))
+      .expect(400); // sem Idempotency-Key
     const criada = await ctx
       .http()
       .post('/aluno/aulas')
       .set(ha)
       .set('idempotency-key', 'chave-aula-1')
-      .send(pedido)
+      .send(await comContrato(ctx, ha, 'aula_avulsa', pedido))
       .expect(201);
     // repetir com a mesma chave devolve a mesma aula (sem cobrar duas vezes)
     const repetida = await ctx
@@ -133,7 +139,7 @@ describe('Fase 1 — fluxo completo pela API', () => {
       .post('/aluno/aulas')
       .set(ha)
       .set('idempotency-key', 'chave-aula-1')
-      .send(pedido)
+      .send(await comContrato(ctx, ha, 'aula_avulsa', pedido))
       .expect(201);
     expect(repetida.body.id).toBe(criada.body.id);
     const aulaId = criada.body.id as string;
@@ -147,7 +153,7 @@ describe('Fase 1 — fluxo completo pela API', () => {
       .post('/aluno/aulas')
       .set(auth(outro.token))
       .set('idempotency-key', 'chave-outro-1')
-      .send(pedido)
+      .send(await comContrato(ctx, auth(outro.token), 'aula_avulsa', pedido))
       .expect(409);
     // nem ver a aula de outra pessoa
     await ctx.http().get(`/aluno/aulas/${aulaId}`).set(auth(outro.token)).expect(404);
@@ -284,13 +290,15 @@ describe('Fase 1 — fluxo completo pela API', () => {
       .post('/aluno/aulas')
       .set(ha)
       .set('idempotency-key', 'chave-cancelar-1')
-      .send({
-        instrutorId: instrutor.instrutorId,
-        inicio: proximoHorario(5, 15),
-        categoria: 'B',
-        pontoEncontro: BASE,
-        pontoEncontroEndereco: 'Rua A',
-      })
+      .send(
+        await comContrato(ctx, ha, 'aula_avulsa', {
+          instrutorId: instrutor.instrutorId,
+          inicio: proximoHorario(5, 15),
+          categoria: 'B',
+          pontoEncontro: BASE,
+          pontoEncontroEndereco: 'Rua A',
+        }),
+      )
       .expect(201);
     await comAtor(ctx.banco.db, ATOR_SISTEMA, async (tx) => {
       await tx

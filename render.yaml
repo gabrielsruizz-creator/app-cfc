@@ -54,6 +54,9 @@ services:
         generateValue: true
       - key: PUSH_PROVEDOR
         value: nenhum
+      # Cópia dos contratos por e-mail. Opcional: preencha no painel do Render (ex.: SMTP do Gmail com senha de app).
+      - key: EMAIL_SMTP_URL
+        sync: false
       # A API também serve o painel web em /painel (mesmo endereço, sem configurar CORS).
       - key: PAINEL_DIR
         value: apps/web/dist

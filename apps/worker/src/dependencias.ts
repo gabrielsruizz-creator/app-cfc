@@ -1,5 +1,6 @@
 import type { Db } from '@volante/db';
 import type { CfcPlusPort } from './portas/cfc-plus';
+import type { EmailPort } from './portas/email';
 import type { GatewayPagamentoPort } from './portas/gateway-pagamento';
 import type { PushPort } from './portas/push';
 
@@ -14,6 +15,8 @@ export type Dependencias = {
   gateways: Record<string, GatewayPagamentoPort>;
   push: PushPort;
   cfcPlus: CfcPlusPort;
+  /** Cópias dos contratos para as partes. */
+  email: EmailPort;
   log: Log;
 };
 

@@ -299,6 +299,14 @@ export default function AulaInstrutor() {
           automática.
         </Aviso>
       )}
+      {!['solicitada', 'aguardando_pagamento'].includes(a.status) && (
+        <Botao
+          titulo="Ver contrato com o aluno"
+          icone="document-text"
+          variante="texto"
+          aoPressionar={() => router.push(`/contrato/${a.pedidoId}?como=instrutor`)}
+        />
+      )}
       {(a.status === 'aguardando_confirmacao' ||
         (a.status === 'confirmada' && new Date(a.fim) < new Date())) && (
         <Botao

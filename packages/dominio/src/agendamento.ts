@@ -24,6 +24,7 @@ import {
 } from '@volante/db';
 import { calcularHorariosLivres, dataLocal, type Intervalo } from './agenda';
 import { gerarCodigoCheckin, gerarCodigoPedido } from './codigos';
+import { registrarContrato, type AceiteNaCompra } from './contratos';
 import { codigoErroPostgres, ErroDominio, naoEncontrado } from './erros';
 import { calcularAceiteAte, movimentarCredito } from './aulas';
 import { regraComissaoVigente } from './financeiro';
@@ -104,6 +105,8 @@ export type DadosSolicitacao = {
   chaveIdempotencia: string;
   /** Código de cupom (opcional). */
   cupom?: string | null;
+  /** Aceite do contrato pelo aluno (hash do texto da prévia, IP e aparelho). */
+  aceiteContrato?: AceiteNaCompra;
   agora?: Date;
 };
 
@@ -275,6 +278,7 @@ export async function solicitarAulaAvulsa(tx: Tx, d: DadosSolicitacao) {
     })
     .returning();
 
+  await registrarContrato(tx, pedido!.id, d.aceiteContrato);
   await publicarEvento(tx, {
     tipo: 'pedido.criado',
     agregadoTipo: 'pedido',

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { aceiteContrato } from './contratos';
 import { centavos, id, pontoGeo } from './comum';
 import { resumoCobranca } from './aulas';
 import { categoriaCnh } from './enums';
@@ -31,6 +32,8 @@ export const comprarPacote = z.object({
   cupom: z.string().trim().max(30).optional(),
   metodo: z.enum(['pix', 'cartao']).default('pix'),
   parcelas: z.number().int().min(1).max(12).default(1),
+  /** Aceite do contrato de prestação de serviços (impressão digital do texto da prévia). */
+  aceiteContrato: aceiteContrato,
 });
 export type ComprarPacote = z.infer<typeof comprarPacote>;
 

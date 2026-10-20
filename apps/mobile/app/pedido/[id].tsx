@@ -157,6 +157,13 @@ export default function Pedido() {
         </Cartao>
       )}
 
+      <Botao
+        titulo="Ver contrato"
+        icone="document-text"
+        variante="secundario"
+        aoPressionar={() => router.push(`/contrato/${p.id}`)}
+      />
+
       {deAutoescola && p.autoescolaId && p.status !== 'aguardando_pagamento' && (
         <Botao
           titulo="Conversar com a autoescola"

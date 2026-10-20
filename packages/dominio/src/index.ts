@@ -9,3 +9,4 @@ export * from './moderacao';
 export * from './cifra';
 export * from './promocoes';
 export * from './rastreamento';
+export * from './contratos';

@@ -1,6 +1,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from './cliente';
 import { ATOR_SISTEMA, comAtor } from './contexto';
+import { MODELO_CONTRATO_PRESTACAO } from './modelo-contrato';
 import { contasFinanceiras, documentosLegais, habilidades, regrasComissao } from './schema';
 
 export const HABILIDADES_PADRAO = [
@@ -66,6 +67,10 @@ export async function semearBase(db: Db): Promise<void> {
         .values({ tipo: d.tipo, versao: d.versao, conteudoMd: TEXTO_PROVISORIO(d.titulo) })
         .onConflictDoNothing();
     }
+    await tx
+      .insert(documentosLegais)
+      .values({ tipo: 'contrato_prestacao', versao: '0.1', conteudoMd: MODELO_CONTRATO_PRESTACAO })
+      .onConflictDoNothing();
 
     for (const titularTipo of ['plataforma', 'externa'] as const) {
       await tx
