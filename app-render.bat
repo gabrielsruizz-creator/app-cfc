@@ -39,9 +39,10 @@ if errorlevel 1 (
 
 echo.
 echo Leia o QR Code abaixo com o Expo Go (celular no mesmo Wi-Fi do computador).
+echo Nao precisa de conta no Expo: o modo --offline so desliga a conta, o app usa a internet normalmente.
 echo Contas de teste: aluno@demo.com / instrutor@demo.com, senha demo1234
 echo.
-call pnpm dev:mobile --clear
+call pnpm dev:mobile --clear --offline
 exit /b 0
 
 :erro
